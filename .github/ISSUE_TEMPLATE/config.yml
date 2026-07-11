@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Project README
+    url: https://github.com/sp2022maomao/1F1B_overlap_monitor
+    about: Read installation, validation, and measurement semantics.

@@ -4,12 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "overlap-monitor-v2"
-version = "0.2.0"
+version = "0.2.1"
 description = "Decoupled 1F1B communication-computation overlap monitoring framework."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
   { name = "Research Engineering" }
+]
+license = "MIT"
+keywords = [
+  "megatron",
+  "moe",
+  "1f1b",
+  "nccl",
+  "profiling",
+  "overlap",
+  "critical-path"
 ]
 dependencies = []
 classifiers = [
@@ -17,7 +27,11 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Topic :: System :: Distributed Computing"
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Distributed Computing",
+  "Topic :: Scientific/Engineering"
 ]
 
 [project.optional-dependencies]
@@ -28,6 +42,12 @@ gpu = [
 
 [project.scripts]
 overlap-monitor-v2 = "overlap_monitor_v2.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/sp2022maomao/1F1B_overlap_monitor"
+Repository = "https://github.com/sp2022maomao/1F1B_overlap_monitor"
+Issues = "https://github.com/sp2022maomao/1F1B_overlap_monitor/issues"
+Documentation = "https://github.com/sp2022maomao/1F1B_overlap_monitor/tree/main/docs"
 
 [tool.setuptools.packages.find]
 where = ["."]

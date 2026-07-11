@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: "overlap-monitor-v2"
+message: "If you use this software in research, please cite it using this metadata."
+type: software
+authors:
+  - name: "overlap-monitor-v2 contributors"
+repository-code: "https://github.com/sp2022maomao/1F1B_overlap_monitor"
+license: MIT
+version: 0.2.1
+date-released: 2026-07-12
+abstract: "Decoupled 1F1B communication-computation overlap monitoring framework for Megatron/MoE experiments."

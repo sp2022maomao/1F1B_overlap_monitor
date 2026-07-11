@@ -1,29 +1,105 @@
-# overlap-monitor-v2
+# 1F1B Overlap Monitor
 
-Decoupled 1F1B communication-computation overlap monitoring framework for Megatron/MoE experiments.
+[![tests](https://github.com/sp2022maomao/1F1B_overlap_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/sp2022maomao/1F1B_overlap_monitor/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This package is independent from the original Megatron codebase. It does not modify original benchmark scripts, original tests, or original output formats.
+`overlap-monitor-v2` is a decoupled 1F1B communication-computation overlap
+monitoring framework for Megatron/MoE experiments.
+
+The project is designed for asynchronous training systems where direct Python
+timers or single-stream CUDA events can misrepresent real exposed communication.
+Its main focus is critical-path overlap analysis for Megatron-style async
+`Work.wait()` behavior, while still supporting kernel timeline overlap from
+PyTorch profiler or Nsight-like traces.
+
+## Status
+
+Open-source alpha, version `0.2.1`.
+
+The Python event model, analyzers, CLI, adapters, and synthetic tests are
+validated locally. Real GPU validation against TE 2.7.0, Megatron, and Nsight
+Systems is still required before making production accuracy or speedup claims.
+
+## Why This Exists
+
+In MoE and 1F1B pipeline training, communication may launch asynchronously and
+finish later on another stream. Measuring only:
+
+```python
+start.record()
+dispatch()
+end.record()
+```
+
+can capture launch overhead or a local stream window instead of exposed
+communication on the training critical path.
+
+This project separates three concepts:
+
+```text
+communication runtime
+hidden communication
+exposed communication
+```
+
+and labels measurement quality explicitly:
+
+```text
+kernel_timeline          exact NCCL/GPU kernel interval is available
+estimated/upper_bound    only Work launch/wait observations are available
+```
 
 ## Installation
 
-Install the CPU-only analysis package:
+Install from a source checkout:
 
 ```bash
 python3 -m pip install .
 ```
 
-For future runtime experiments:
+For editable development:
+
+```bash
+python3 -m pip install -e .
+```
+
+Optional GPU/runtime integrations may use:
 
 ```text
 Python >= 3.10
 PyTorch with CUDA profiler support
 transformer-engine==2.7.0
+Nsight Systems traces
 ```
 
-Run the synthetic test suite from a source checkout:
+## Quick Start
+
+Run the synthetic test suite:
 
 ```bash
 python3 -m unittest discover -s overlap_monitor_v2/tests -p 'test_*.py'
+```
+
+Analyze a bundled async critical-path example:
+
+```bash
+overlap-monitor-v2 analyze \
+  --input overlap_monitor_v2/examples/critical_path_events.jsonl \
+  --mode critical-path \
+  --table \
+  --ascii
+```
+
+Validate event quality before analysis:
+
+```bash
+overlap-monitor-v2 validate --input events.jsonl
+```
+
+Run the CPU microbenchmark:
+
+```bash
+python3 overlap_monitor_v2/benchmarks/benchmark_runtime.py
 ```
 
 ## Architecture
@@ -37,22 +113,6 @@ python3 -m unittest discover -s overlap_monitor_v2/tests -p 'test_*.py'
   -> Metric Reporter
 ```
 
-Package layout:
-
-```text
-overlap_monitor_v2/
-├── adapters/
-├── core/
-├── profiler/
-├── analyzer/
-├── te_adapter/
-├── visualization/
-├── tests/
-├── configs/
-├── benchmarks/
-└── tests/
-```
-
 Runtime and offline analysis are deliberately separated:
 
 ```text
@@ -60,6 +120,25 @@ Megatron async Work -> MegatronWorkAdapter -> WorkHandleRecorder
                                          -> MonitoringSession -> events.jsonl
 events.jsonl / profiler trace -> validator -> analyzer -> report/trace
 ```
+
+Package layout:
+
+```text
+overlap_monitor_v2/
+├── adapters/
+├── analyzer/
+├── benchmarks/
+├── configs/
+├── core/
+├── examples/
+├── profiler/
+├── te_adapter/
+├── tests/
+└── visualization/
+```
+
+Core modules do not import Megatron, PyTorch, Transformer Engine, or Nsight.
+Framework integration should happen through thin adapters.
 
 ## Event Model
 
@@ -90,13 +169,12 @@ PIPELINE
 UNKNOWN
 ```
 
-## Overlap Algorithm
-
-v2 keeps two analyzers because Megatron/MoE execution is asynchronous.
+## Overlap Algorithms
 
 ### Kernel Timeline Overlap
 
-Given compute intervals `C` and communication intervals `N`, v2 computes:
+Given compute intervals `C` and communication intervals `N`, the analyzer
+computes:
 
 ```text
 compute_time = union(C)
@@ -107,19 +185,19 @@ bubble_ratio = idle stage-time / total stage timeline span
 stage_balance = min(stage active span) / max(stage active span)
 ```
 
-This is useful for profiler/Nsight-like timelines, but it does not always equal
-the training critical path.
+This is useful for profiler/Nsight timelines, but it does not always equal the
+training critical path.
 
-### Critical Path Overlap
+### Critical-Path Overlap
 
-For async Megatron communication, prefer:
+For async Megatron communication:
 
 ```text
 COMMUNICATION = async Work launch -> completion
 WAIT          = Work.wait start -> Work.wait end
 ```
 
-When an NCCL kernel timeline is available:
+When NCCL kernel intervals are available:
 
 ```text
 communication_runtime = union(NCCL kernels)
@@ -136,42 +214,45 @@ hidden_communication = communication_runtime - exposed_communication
 overlap_ratio = hidden_communication / communication_runtime
 ```
 
-The second path is labeled `estimated/upper_bound` when completion is observed
-only after `wait()` returns. Reports never present that window as exact NCCL
-kernel runtime.
+The Work-only path is reported as an estimated upper bound when true completion
+is only observed after `wait()` returns.
 
-`profiler.WorkHandleRecorder` records `work.wait()` without forcing a global CUDA
-synchronization. `analyzer.CriticalPathOverlapAnalyzer` turns those events into
-critical-path metrics.
+## Public API
 
-`adapters.MegatronWorkAdapter` adds rank/stage/iteration/microbatch context while
-remaining free of Megatron and torch imports.
-
-## Validation
-
-Validate clock domains and Work correlations before analysis:
-
-```bash
-overlap-monitor-v2 validate --input events.jsonl
+```python
+from overlap_monitor_v2 import (
+    CriticalPathOverlapAnalyzer,
+    Event,
+    EventType,
+    MegatronWorkAdapter,
+    MonitoringSession,
+    OverlapAnalyzer,
+    WorkHandleRecorder,
+)
 ```
 
-The validator rejects mixed unaligned rank clock domains and orphan WAIT events,
-and warns when a Work completion is only an upper-bound observation.
+Example Work-handle wrapping:
 
-Current local verification is documented in `docs/validation_report.md`. It
-covers synthetic correctness and CPU overhead only; a real TE 2.7.0 Megatron GPU
-comparison is still required before claiming production accuracy or training
-speedup.
-
-Run the bundled CPU microbenchmark with:
-
-```bash
-python3 overlap_monitor_v2/benchmarks/benchmark_runtime.py
+```python
+recorder = WorkHandleRecorder()
+work = torch.distributed.all_to_all_single(..., async_op=True)
+work = recorder.wrap(
+    work,
+    comm_id="mb0_dispatch",
+    name="dispatch_a2a",
+    stage_id=0,
+    microbatch_id=0,
+    phase="dispatch",
+)
+work.wait()
+events = recorder.events()
 ```
+
+`WorkHandleRecorder` does not call global CUDA synchronize.
 
 ## Transformer Engine 2.7.0 Support
 
-`te_adapter/te_adapter.py` maps TE kernels such as:
+`te_adapter/te_adapter.py` maps TE kernel names such as:
 
 ```text
 transformer_engine::gemm
@@ -188,7 +269,7 @@ MEMORY
 COMPUTE
 ```
 
-It also tags precision hints such as `fp8`, `bf16`, and `fp16` when visible in kernel names.
+It also tags visible precision hints such as `fp8`, `bf16`, and `fp16`.
 
 ## Visualization
 
@@ -200,64 +281,27 @@ ASCII timeline
 Markdown summary table
 ```
 
-Chrome trace output is compatible with:
+Chrome trace output can be opened with `chrome://tracing`.
 
-```text
-chrome://tracing
-```
+## Documentation
 
-## Migration From Original Monitor
+- [Async measurement design](docs/async_measurement_design.md)
+- [Industrial reusable module design](docs/industrial_reusable_module_design.md)
+- [Validation report](docs/validation_report.md)
+- [Similar projects report](docs/similar_projects_report.md)
+- [Roadmap](ROADMAP.md)
+- [Contributing guide](CONTRIBUTING.md)
 
-Original monitor behavior:
+## Similar Tools
 
-```text
-PyTorch profiler -> in-process parser -> CSV/JSONL metrics
-```
+This project is not a replacement for PyTorch profiler, Kineto, Nsight Systems,
+Megatron-Core, or DeepEP. Those tools are upstream runtimes or full profiler
+systems. `overlap-monitor-v2` is a small analysis library focused on
+stage-aware 1F1B critical-path overlap metrics and async Work/wait measurement
+semantics.
 
-v2 migration path:
+See `docs/similar_projects_report.md` for the comparison.
 
-```text
-PyTorch profiler events
-  -> profiler.PyTorchProfilerEventParser
-  -> profiler.TimelineNormalizer
-  -> analyzer.OverlapAnalyzer
-  -> visualization/reporting
-```
+## License
 
-For async A2A critical-path measurement:
-
-```text
-torch.distributed async Work
-  -> profiler.WorkHandleRecorder
-  -> analyzer.CriticalPathOverlapAnalyzer
-  -> exposed/hidden communication metrics
-```
-
-Original output fields can be preserved in an adapter, while v2 adds stage-aware metrics and visualization.
-
-## Future GPU Experiment Plan
-
-Target hardware:
-
-```text
-8 x A100-40G
-```
-
-Target models/runtime:
-
-```text
-Mixtral MoE
-Qwen MoE
-Megatron-Core
-Transformer Engine 2.7.0
-```
-
-Experiment directions:
-
-```text
-EP AllToAll overlap
-1F1B pipeline schedule analysis
-NCCL kernel timeline analysis
-GEMM/attention overlap analysis
-pipeline bubble and stage imbalance measurement
-```
+MIT License. See [LICENSE](LICENSE).
