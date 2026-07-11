@@ -1,8 +1,8 @@
-# overlap_monitor_v2 验证报告
+# overlap_monitor 验证报告
 
 ## 验证范围
 
-本报告验证 v0.2.1 的纯 Python 逻辑、接口、解耦性和本机 CPU 开销。未使用远程 GPU，因此不包含 TE 2.7.0/Megatron 真实训练吞吐或 Nsight 精度对照。
+本报告验证 v0.3.0 的纯 Python 逻辑、接口、解耦性和本机 CPU 开销。未使用远程 GPU，因此不包含 TE 2.7.0/Megatron 真实训练吞吐或 Nsight 精度对照。
 
 ## 结果
 
@@ -11,7 +11,7 @@
 | 单元/集成测试 | 23/23 通过 |
 | Python compileall | 通过 |
 | 公共包导入 | 通过 |
-| wheel 构建与隔离安装 | `overlap_monitor_v2-0.2.1-py3-none-any.whl` 通过 |
+| wheel 构建与隔离安装 | `overlap_monitor-0.3.0-py3-none-any.whl` 通过 |
 | torch/Megatron/TE 直接依赖扫描 | 0 处 |
 | synthetic critical-path 结果 | 符合预期 |
 | mixed-rank clock-domain 防护 | 通过 |

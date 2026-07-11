@@ -1,8 +1,8 @@
-# overlap_monitor_v2 工业级可复用模块说明
+# overlap_monitor 工业级可复用模块说明
 
 ## 当前结论
 
-`overlap_monitor_v2` 已形成可安装、可测试、与 Megatron 解耦的复用模块。当前成熟度是“本地逻辑与接口验证完成，等待真实 GPU 对照验证”，不能仅凭 synthetic 测试称为生产验证完成。
+`overlap_monitor` 已形成可安装、可测试、与 Megatron 解耦的复用模块。当前成熟度是“本地逻辑与接口验证完成，等待真实 GPU 对照验证”，不能仅凭 synthetic 测试称为生产验证完成。
 
 它重点解决的问题是：
 
@@ -18,7 +18,7 @@ Megatron/MoE 的通信和计算高度异步，简单 Python timer 或单 stream 
 ## 目录结构
 
 ```text
-overlap_monitor_v2/
+overlap_monitor/
 ├── adapters/
 │   └── megatron.py
 ├── core/
@@ -161,7 +161,7 @@ measurement_quality = kernel_timeline
 ## 公共 API
 
 ```python
-from overlap_monitor_v2 import (
+from overlap_monitor import (
     CriticalPathOverlapAnalyzer,
     Event,
     EventType,
@@ -218,8 +218,8 @@ work = adapter.wrap_a2a(
 ## CLI 用法
 
 ```bash
-python3 -m overlap_monitor_v2.cli analyze \
-  --input overlap_monitor_v2/examples/critical_path_events.jsonl \
+python3 -m overlap_monitor.cli analyze \
+  --input overlap_monitor/examples/critical_path_events.jsonl \
   --mode critical-path \
   --table \
   --ascii
@@ -228,8 +228,8 @@ python3 -m overlap_monitor_v2.cli analyze \
 输出 JSON：
 
 ```bash
-python3 -m overlap_monitor_v2.cli analyze \
-  --input overlap_monitor_v2/examples/critical_path_events.jsonl \
+python3 -m overlap_monitor.cli analyze \
+  --input overlap_monitor/examples/critical_path_events.jsonl \
   --mode critical-path \
   --output-json /tmp/critical_path_summary.json
 ```
@@ -240,7 +240,7 @@ python3 -m overlap_monitor_v2.cli analyze \
 
 ```bash
 python3 -m unittest discover \
-  -s overlap_monitor_v2/tests \
+  -s overlap_monitor/tests \
   -p 'test_*.py'
 ```
 

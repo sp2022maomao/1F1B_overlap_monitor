@@ -5,7 +5,7 @@ What changed?
 ## Validation
 
 ```bash
-python3 -m unittest discover -s overlap_monitor_v2/tests -p 'test_*.py'
+python3 -m unittest discover -s overlap_monitor/tests -p 'test_*.py'
 ```
 
 ## Measurement Semantics

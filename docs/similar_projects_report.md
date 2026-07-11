@@ -3,7 +3,7 @@
 Date: 2026-07-12
 
 This report summarizes existing related projects and the positioning of
-`overlap-monitor-v2`.
+`overlap-monitor`.
 
 ## Search Summary
 
@@ -43,7 +43,7 @@ systems, trace analyzers, or NCCL/kernel-focused tools.
 
 ## Differentiation
 
-`overlap-monitor-v2` should position itself as:
+`overlap-monitor` should position itself as:
 
 ```text
 a lightweight, framework-decoupled overlap analysis library for Megatron/MoE

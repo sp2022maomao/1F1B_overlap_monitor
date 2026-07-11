@@ -3,8 +3,8 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "overlap-monitor-v2"
-version = "0.2.1"
+name = "overlap-monitor"
+version = "0.3.0"
 description = "Decoupled 1F1B communication-computation overlap monitoring framework."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -41,7 +41,7 @@ gpu = [
 ]
 
 [project.scripts]
-overlap-monitor-v2 = "overlap_monitor_v2.cli:main"
+overlap-monitor = "overlap_monitor.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/sp2022maomao/1F1B_overlap_monitor"
@@ -51,7 +51,7 @@ Documentation = "https://github.com/sp2022maomao/1F1B_overlap_monitor/tree/main/
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["overlap_monitor_v2*"]
+include = ["overlap_monitor*"]
 
 [tool.setuptools.package-data]
-overlap_monitor_v2 = ["py.typed", "configs/*.json", "examples/*.jsonl"]
+overlap_monitor = ["py.typed", "configs/*.json", "examples/*.jsonl"]

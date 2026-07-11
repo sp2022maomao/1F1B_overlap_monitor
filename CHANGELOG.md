@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-07-12
+
+- Rename the public Python package from `overlap_monitor_v2` to
+  `overlap_monitor`.
+- Rename the distribution from `overlap-monitor-v2` to `overlap-monitor` and
+  the CLI command from `overlap-monitor-v2` to `overlap-monitor`.
+- Update tests, examples, package metadata, and documentation to use the stable
+  version-independent name.
+
 ## 0.2.1 - 2026-07-12
 
 - Prepare the repository as an open-source alpha release.

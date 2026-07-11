@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve `overlap-monitor-v2`.
+Thanks for helping improve `overlap-monitor`.
 
 ## Project Scope
 
@@ -12,7 +12,7 @@ independent from Megatron, PyTorch, Transformer Engine, and Nsight imports.
 
 ```bash
 python3 -m pip install -e .
-python3 -m unittest discover -s overlap_monitor_v2/tests -p 'test_*.py'
+python3 -m unittest discover -s overlap_monitor/tests -p 'test_*.py'
 ```
 
 Optional GPU integrations may depend on:
@@ -38,8 +38,8 @@ Nsight Systems / PyTorch profiler traces
 For pure Python changes:
 
 ```bash
-python3 -m unittest discover -s overlap_monitor_v2/tests -p 'test_*.py'
-python3 overlap_monitor_v2/benchmarks/benchmark_runtime.py
+python3 -m unittest discover -s overlap_monitor/tests -p 'test_*.py'
+python3 -m overlap_monitor.benchmarks.benchmark_runtime
 ```
 
 For GPU changes, include:

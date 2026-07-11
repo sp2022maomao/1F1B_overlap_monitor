@@ -3,7 +3,7 @@
 [![tests](https://github.com/sp2022maomao/1F1B_overlap_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/sp2022maomao/1F1B_overlap_monitor/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-`overlap-monitor-v2` is a decoupled 1F1B communication-computation overlap
+`overlap-monitor` is a decoupled 1F1B communication-computation overlap
 monitoring framework for Megatron/MoE experiments.
 
 The project is designed for asynchronous training systems where direct Python
@@ -14,7 +14,7 @@ PyTorch profiler or Nsight-like traces.
 
 ## Status
 
-Open-source alpha, version `0.2.1`.
+Open-source alpha, version `0.3.0`.
 
 The Python event model, analyzers, CLI, adapters, and synthetic tests are
 validated locally. Real GPU validation against TE 2.7.0, Megatron, and Nsight
@@ -77,14 +77,14 @@ Nsight Systems traces
 Run the synthetic test suite:
 
 ```bash
-python3 -m unittest discover -s overlap_monitor_v2/tests -p 'test_*.py'
+python3 -m unittest discover -s overlap_monitor/tests -p 'test_*.py'
 ```
 
 Analyze a bundled async critical-path example:
 
 ```bash
-overlap-monitor-v2 analyze \
-  --input overlap_monitor_v2/examples/critical_path_events.jsonl \
+overlap-monitor analyze \
+  --input overlap_monitor/examples/critical_path_events.jsonl \
   --mode critical-path \
   --table \
   --ascii
@@ -93,14 +93,26 @@ overlap-monitor-v2 analyze \
 Validate event quality before analysis:
 
 ```bash
-overlap-monitor-v2 validate --input events.jsonl
+overlap-monitor validate --input events.jsonl
 ```
 
 Run the CPU microbenchmark:
 
 ```bash
-python3 overlap_monitor_v2/benchmarks/benchmark_runtime.py
+python3 -m overlap_monitor.benchmarks.benchmark_runtime
 ```
+
+## Migrating from 0.2.x
+
+Version 0.3.0 adopts a version-independent public name. Replace imports and
+the CLI command as follows:
+
+```text
+overlap_monitor_v2  -> overlap_monitor
+overlap-monitor-v2  -> overlap-monitor
+```
+
+The event schema and output formats are unchanged.
 
 ## Architecture
 
@@ -124,7 +136,7 @@ events.jsonl / profiler trace -> validator -> analyzer -> report/trace
 Package layout:
 
 ```text
-overlap_monitor_v2/
+overlap_monitor/
 ├── adapters/
 ├── analyzer/
 ├── benchmarks/
@@ -220,7 +232,7 @@ is only observed after `wait()` returns.
 ## Public API
 
 ```python
-from overlap_monitor_v2 import (
+from overlap_monitor import (
     CriticalPathOverlapAnalyzer,
     Event,
     EventType,
@@ -296,7 +308,7 @@ Chrome trace output can be opened with `chrome://tracing`.
 
 This project is not a replacement for PyTorch profiler, Kineto, Nsight Systems,
 Megatron-Core, or DeepEP. Those tools are upstream runtimes or full profiler
-systems. `overlap-monitor-v2` is a small analysis library focused on
+systems. `overlap-monitor` is a small analysis library focused on
 stage-aware 1F1B critical-path overlap metrics and async Work/wait measurement
 semantics.
 
