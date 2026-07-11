@@ -301,6 +301,7 @@ Chrome trace output can be opened with `chrome://tracing`.
 - [Industrial reusable module design](docs/industrial_reusable_module_design.md)
 - [Validation report](docs/validation_report.md)
 - [Similar projects report](docs/similar_projects_report.md)
+- [Reference materials and bibliography](references/README.md)
 - [Roadmap](ROADMAP.md)
 - [Contributing guide](CONTRIBUTING.md)
 
