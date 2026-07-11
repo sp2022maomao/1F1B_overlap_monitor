@@ -1,0 +1,21 @@
+{
+  "collector": {
+    "source": "pytorch_profiler",
+    "unit": "us"
+  },
+  "classifier": {
+    "transformer_engine_min_version": "2.7.0",
+    "classify_nccl": true,
+    "classify_gemm": true,
+    "classify_attention": true
+  },
+  "analyzer": {
+    "overlap_ratio_denominator": "min_compute_comm",
+    "stage_balance_metric": "min_active_span_over_max_active_span"
+  },
+  "outputs": {
+    "chrome_trace": "trace.json",
+    "ascii_timeline": "timeline.txt",
+    "summary": "summary.json"
+  }
+}

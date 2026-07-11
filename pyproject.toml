@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "overlap-monitor-v2"
+version = "0.2.0"
+description = "Decoupled 1F1B communication-computation overlap monitoring framework."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Research Engineering" }
+]
+dependencies = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: System :: Distributed Computing"
+]
+
+[project.optional-dependencies]
+gpu = [
+  "torch",
+  "transformer-engine==2.7.0"
+]
+
+[project.scripts]
+overlap-monitor-v2 = "overlap_monitor_v2.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["overlap_monitor_v2*"]
+
+[tool.setuptools.package-data]
+overlap_monitor_v2 = ["py.typed", "configs/*.json", "examples/*.jsonl"]
