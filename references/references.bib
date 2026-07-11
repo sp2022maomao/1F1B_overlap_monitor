@@ -1,76 +1,130 @@
+% Starter bibliography for overlap-monitor.
+% Verify author lists, venue metadata, and access dates before publication.
+
 @misc{nvidia_megatron_core_moe,
+  author       = {{NVIDIA}},
   title        = {Megatron-Core MoE User Guide},
-  author       = {{NVIDIA}},
-  howpublished = {\url{https://docs.nvidia.com/megatron-core/developer-guide/nightly/user-guide/features/moe.html}},
+  howpublished = {NVIDIA Documentation},
+  url          = {https://docs.nvidia.com/megatron-core/developer-guide/nightly/user-guide/features/moe.html},
   note         = {Accessed 2026-07-12}
 }
 
-@misc{nvidia_megatron_bridge_comm_overlap,
-  title        = {Megatron Bridge Communication Overlap},
+@misc{nvidia_megatron_bridge_overlap,
   author       = {{NVIDIA}},
-  howpublished = {\url{https://docs.nvidia.com/nemo/megatron-bridge/latest/training/communication-overlap.html}},
+  title        = {Megatron Bridge: Communication Overlap},
+  howpublished = {NVIDIA Documentation},
+  url          = {https://docs.nvidia.com/nemo/megatron-bridge/latest/training/communication-overlap.html},
   note         = {Accessed 2026-07-12}
 }
 
-@misc{megatron_core_technical_report,
-  title        = {Megatron-Core Technical Report},
-  author       = {{NVIDIA Megatron-Core Contributors}},
-  howpublished = {\url{https://arxiv.org/abs/2603.07685}},
-  year         = {2026}
+@article{megatron_core_technical_report,
+  author  = {{NVIDIA Megatron-Core Contributors}},
+  title   = {Megatron-Core Technical Report},
+  journal = {arXiv preprint arXiv:2603.07685},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2603.07685}
 }
 
 @article{huang2019gpipe,
-  title   = {GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism},
   author  = {Huang, Yanping and others},
-  journal = {arXiv preprint arXiv:1811.06965},
-  year    = {2019}
+  title   = {{GPipe}: Efficient Training of Giant Neural Networks using Pipeline Parallelism},
+  journal = {Advances in Neural Information Processing Systems},
+  year    = {2019},
+  url     = {https://arxiv.org/abs/1811.06965}
 }
 
 @inproceedings{narayanan2019pipedream,
-  title     = {PipeDream: Generalized Pipeline Parallelism for DNN Training},
   author    = {Narayanan, Deepak and others},
-  booktitle = {SOSP},
-  year      = {2019}
+  title     = {{PipeDream}: Generalized Pipeline Parallelism for {DNN} Training},
+  booktitle = {Proceedings of the 27th ACM Symposium on Operating Systems Principles},
+  year      = {2019},
+  doi       = {10.1145/3341301.3359646}
 }
 
 @article{narayanan2021megatron,
-  title   = {Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM},
   author  = {Narayanan, Deepak and others},
+  title   = {Efficient Large-Scale Language Model Training on {GPU} Clusters Using {Megatron-LM}},
   journal = {arXiv preprint arXiv:2104.04473},
-  year    = {2021}
+  year    = {2021},
+  url     = {https://arxiv.org/abs/2104.04473}
 }
 
-@article{rajbhandari2019zero,
-  title   = {ZeRO: Memory Optimizations Toward Training Trillion Parameter Models},
+@article{rajbhandari2020zero,
   author  = {Rajbhandari, Samyam and others},
+  title   = {{ZeRO}: Memory Optimizations Toward Training Trillion Parameter Models},
   journal = {arXiv preprint arXiv:1910.02054},
-  year    = {2019}
+  year    = {2020},
+  url     = {https://arxiv.org/abs/1910.02054}
 }
 
-@article{rajbhandari2022deepspeedmoe,
-  title   = {DeepSpeed-MoE: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation AI Scale},
+@article{rajbhandari2022deepspeed_moe,
   author  = {Rajbhandari, Samyam and others},
+  title   = {{DeepSpeed-MoE}: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation {AI} Scale},
   journal = {arXiv preprint arXiv:2201.05596},
-  year    = {2022}
+  year    = {2022},
+  url     = {https://arxiv.org/abs/2201.05596}
 }
 
 @article{deepseek2024v3,
-  title   = {DeepSeek-V3 Technical Report},
   author  = {{DeepSeek-AI}},
+  title   = {{DeepSeek-V3} Technical Report},
   journal = {arXiv preprint arXiv:2412.19437},
-  year    = {2024}
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2412.19437}
+}
+
+@misc{deepseek_deepep,
+  author       = {{DeepSeek-AI}},
+  title        = {{DeepEP}: An Efficient Expert-Parallel Communication Library},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/deepseek-ai/DeepEP},
+  note         = {Accessed 2026-07-12}
+}
+
+@misc{bytedance_flux,
+  author       = {{ByteDance}},
+  title        = {{FLUX}: A Fast Software Library for {GPU} Communication Overlap},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/bytedance/flux},
+  note         = {Accessed 2026-07-12}
 }
 
 @misc{nvidia_nsight_systems,
-  title        = {NVIDIA Nsight Systems User Guide},
   author       = {{NVIDIA}},
-  howpublished = {\url{https://docs.nvidia.com/nsight-systems/UserGuide/index.html}},
+  title        = {{NVIDIA Nsight Systems} User Guide},
+  howpublished = {NVIDIA Documentation},
+  url          = {https://docs.nvidia.com/nsight-systems/UserGuide/index.html},
   note         = {Accessed 2026-07-12}
 }
 
 @misc{pytorch_profiler,
-  title        = {PyTorch Profiler},
   author       = {{PyTorch Contributors}},
-  howpublished = {\url{https://docs.pytorch.org/docs/stable/profiler.html}},
+  title        = {{PyTorch Profiler}},
+  howpublished = {PyTorch Documentation},
+  url          = {https://docs.pytorch.org/docs/stable/profiler.html},
+  note         = {Accessed 2026-07-12}
+}
+
+@misc{pytorch_kineto,
+  author       = {{PyTorch Contributors}},
+  title        = {{Kineto}: A Performance Profiling Library},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/pytorch/kineto},
+  note         = {Accessed 2026-07-12}
+}
+
+@misc{meta_holistic_trace_analysis,
+  author       = {{Meta Research}},
+  title        = {Holistic Trace Analysis},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/facebookresearch/HolisticTraceAnalysis},
+  note         = {Accessed 2026-07-12}
+}
+
+@misc{nvidia_nccl_tests,
+  author       = {{NVIDIA}},
+  title        = {{NCCL Tests}},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/NVIDIA/nccl-tests},
   note         = {Accessed 2026-07-12}
 }

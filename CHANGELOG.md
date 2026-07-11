@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Restructure the reference materials for public use with implementation-aligned
+  metric semantics, stable upstream source links, an annotated bibliography,
+  and maintained BibTeX entries.
+
 ## 0.3.0 - 2026-07-12
 
 - Rename the public Python package from `overlap_monitor_v2` to
