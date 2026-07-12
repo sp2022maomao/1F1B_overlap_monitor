@@ -1,0 +1,4 @@
+{"correlation_id": 101, "external_id": 7, "external_kind": "custom0", "record_kind": "external_correlation", "schema_version": 1}
+{"correlation_id": 101, "device_id": 0, "end_ns": 10000, "name": "ncclDevKernel_AllToAll", "process_id": 1234, "record_kind": "kernel", "schema_version": 1, "start_ns": 0, "stream_id": 11}
+{"correlation_id": 102, "device_id": 0, "end_ns": 15000, "name": "nvte_gemm_fp8", "process_id": 1234, "record_kind": "kernel", "schema_version": 1, "start_ns": 5000, "stream_id": 12}
+{"dropped_records": 0, "record_kind": "collector_summary", "schema_version": 1}

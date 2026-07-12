@@ -7,7 +7,7 @@ Mixtral/MoE 训练里的 A2A、GEMM、pipeline schedule 通常是异步执行的
 因此当前主线采用两层设计：
 
 1. `OverlapAnalyzer`：分析 profiler/kernel timeline 的区间 overlap。
-2. `CriticalPathOverlapAnalyzer`：分析异步 Work 生命周期和 `work.wait()` 暴露等待，更适合 Megatron/MoE 的 critical path overlap。
+2. `CriticalPathOverlapAnalyzer`：分析异步 Work 生命周期和 `work.wait()` host-side proxy；精确 critical path 仍需 GPU timeline 与依赖信息。
 
 ## 常见方法
 
@@ -25,7 +25,7 @@ Mixtral/MoE 训练里的 A2A、GEMM、pipeline schedule 通常是异步执行的
 
 - `communication_runtime`：有 kernel timeline 时为 NCCL 区间；只有 Work 时为带质量标记的生命周期观测窗口。
 - `hidden_communication`：没有暴露在关键路径上的通信。
-- `exposed_communication`：`work.wait()` 等待中仍未完成的通信。
+- `exposed_communication`：有 kernel timeline 时为未被计算覆盖的通信；Work-only 时为 host-side wait proxy。
 - `overlap_ratio`：`hidden_communication / communication_runtime`。
 - `critical_path_span`：当前 stage/microbatch/phase 的关键路径时间范围。
 
@@ -50,14 +50,14 @@ wait_start
 wait_end
 ```
 
-由此生成两个事件；若 completion 仅在 wait 返回时得到，它是上界：
+由此生成两个 host-side 观测事件：
 
 ```text
-COMMUNICATION: launch_time -> observed completion
+COMMUNICATION: launch_time -> completion observation / wait-return proxy
 WAIT:          wait_start  -> wait_end
 ```
 
-`WAIT` 是关键路径阻塞证据；精确 NCCL runtime 和 NCCL/GEMM overlap 仍以 profiler/Nsight kernel timeline 为准。
+默认 ProcessGroupNCCL 下，`wait()` 返回可能只表示已在当前 CUDA stream 建立依赖，不保证 collective 已完成。因此 `WAIT` 只是 host-side proxy；精确 NCCL runtime 和 NCCL/GEMM overlap 以 CUPTI/profiler/Nsight kernel timeline 为准。
 
 ### 3. 将 kernel overlap 和 critical path overlap 分开
 

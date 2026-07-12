@@ -1,0 +1,3 @@
+recursive-include native *.cpp *.h CMakeLists.txt README.md
+recursive-include docs *.md
+recursive-include references *.md *.bib

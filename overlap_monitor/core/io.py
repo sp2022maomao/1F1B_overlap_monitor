@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 from collections.abc import Iterable
 
-from overlap_monitor.core.events import Event, EventType, event_from_mapping
+from overlap_monitor.core.events import Event, event_from_mapping
 
 
 def event_to_dict(event: Event) -> dict:

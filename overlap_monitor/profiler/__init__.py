@@ -1,5 +1,12 @@
+from overlap_monitor.profiler.cupti import CuptiActivityParser, CuptiParseResult
 from overlap_monitor.profiler.normalizer import TimelineNormalizer
 from overlap_monitor.profiler.pytorch_profiler import PyTorchProfilerEventParser
 from overlap_monitor.profiler.work_handle import WorkHandleRecorder
 
-__all__ = ["TimelineNormalizer", "PyTorchProfilerEventParser", "WorkHandleRecorder"]
+__all__ = [
+    "CuptiActivityParser",
+    "CuptiParseResult",
+    "TimelineNormalizer",
+    "PyTorchProfilerEventParser",
+    "WorkHandleRecorder",
+]

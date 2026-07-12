@@ -49,9 +49,6 @@ class ObservedWork:
                 if self.record.wait_start is None:
                     self.record.wait_start = wait_start
                     self.record.wait_end = wait_end
-                if self.record.completion_time is None:
-                    self.record.completion_time = wait_end
-                    self.record.completion_source = "wait_return_upper_bound"
 
     def mark_completed(
         self, timestamp: float | None = None, *, source: str = "adapter_observation"
@@ -62,7 +59,10 @@ class ObservedWork:
         with self.record.lock:
             if completion_time < self.record.launch_time:
                 raise ValueError("completion timestamp precedes communication launch")
-            if self.record.completion_time is None or completion_time < self.record.completion_time:
+            if (
+                self.record.completion_time is None
+                or completion_time < self.record.completion_time
+            ):
                 self.record.completion_time = completion_time
                 self.record.completion_source = source
 
@@ -118,11 +118,19 @@ class WorkHandleRecorder:
     def _record_events(self, record: WorkRecord) -> list[Event]:
         events: list[Event] = []
         metadata = self._public_metadata(record)
-        completion_time = record.completion_time or record.launch_time
+        observation_end = (
+            record.completion_time or record.wait_end or record.launch_time
+        )
+        if record.completion_time is not None:
+            runtime_kind = "observed_work_window"
+        elif record.wait_end is not None:
+            runtime_kind = "host_wait_proxy"
+        else:
+            runtime_kind = "unbounded"
         events.append(
             Event(
                 timestamp_start=record.launch_time,
-                timestamp_end=completion_time,
+                timestamp_end=observation_end,
                 event_type=EventType.COMMUNICATION,
                 name=record.name,
                 device_id=record.device_id,
@@ -134,11 +142,7 @@ class WorkHandleRecorder:
                     "measurement": "async_work_lifetime",
                     "completion_observed": record.completion_time is not None,
                     "completion_source": record.completion_source or "not_observed",
-                    "runtime_kind": (
-                        "upper_bound"
-                        if record.completion_source == "wait_return_upper_bound"
-                        else "observed"
-                    ),
+                    "runtime_kind": runtime_kind,
                 },
             )
         )

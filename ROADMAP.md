@@ -19,6 +19,7 @@
 ## v0.4.0: Trace Interoperability
 
 - Improve PyTorch profiler trace import.
+- Validate and stabilize the initial native CUPTI collector on CUDA 12.9.
 - Add richer Chrome trace export categories.
 - Add optional Nsight SQLite ingestion if the dependency footprint stays clean.
 - Add stage-aware 1F1B summaries across rank groups.

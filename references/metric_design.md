@@ -20,7 +20,7 @@ microbatch_id
 phase              # dispatch, expert, combine, forward, backward
 comm_id             # correlates launch, completion, and wait
 measurement         # kernel_timeline, async_work_lifetime, critical_path_wait
-runtime_kind        # observed_kernel_runtime, observed_work_window, upper_bound
+runtime_kind        # observed_kernel_runtime, observed_work_window, host_wait_proxy
 ```
 
 Before analysis, intervals of the same class are merged. This prevents
@@ -88,11 +88,12 @@ overlap_ratio          = hidden_communication / communication_runtime
 measurement_quality    = estimated
 ```
 
-If completion is first observed when `wait()` returns, the launch-to-return
-window is marked `upper_bound`. It can include queueing, unrelated host work,
-and time after the underlying collective completed. In that case,
-`communication_runtime` and `hidden_communication` are estimates; `wait_time`
-is the directly observed blocking interval.
+If no independent completion timestamp exists, the launch-to-return window is
+marked `host_wait_proxy`. Under default ProcessGroupNCCL semantics, `wait()` may
+insert a CUDA stream dependency without blocking the CPU until collective
+completion. The proxy is therefore neither an exact kernel runtime nor a
+guaranteed upper bound. `communication_runtime`, `hidden_communication`, and
+`wait_time` are host-side estimates in this mode.
 
 ### Generic fallback
 

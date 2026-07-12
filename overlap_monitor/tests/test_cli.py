@@ -39,9 +39,33 @@ class CliTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         with redirect_stdout(io.StringIO()):
             exit_code = main(
-                ["validate", "--input", str(root / "examples" / "critical_path_events.jsonl")]
+                [
+                    "validate",
+                    "--input",
+                    str(root / "examples" / "critical_path_events.jsonl"),
+                ]
             )
         self.assertEqual(exit_code, 0)
+
+    def test_import_cupti_converts_activity_trace(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmpdir, redirect_stdout(io.StringIO()):
+            output_path = Path(tmpdir) / "events.jsonl"
+            exit_code = main(
+                [
+                    "import-cupti",
+                    "--input",
+                    str(root / "examples" / "cupti_activity.jsonl"),
+                    "--output",
+                    str(output_path),
+                    "--rank",
+                    "0",
+                    "--stage-id",
+                    "0",
+                ]
+            )
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(output_path.exists())
 
 
 if __name__ == "__main__":

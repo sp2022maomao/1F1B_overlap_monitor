@@ -54,6 +54,7 @@ destroy the overlap under study.
 | [PyTorch Profiler](https://docs.pytorch.org/docs/stable/profiler.html) | Operator and CUDA activity traces | Input source for normalized timeline events. |
 | [NVIDIA Nsight Systems](https://docs.nvidia.com/nsight-systems/UserGuide/index.html) | System-wide CUDA/NCCL timeline | Preferred external validation source for GPU timing. |
 | [Kineto](https://github.com/pytorch/kineto) | PyTorch profiling backend | Trace infrastructure, complementary to this project's analysis layer. |
+| [CUPTI Activity API](https://docs.nvidia.com/cupti/api/group__CUPTI__ACTIVITY__API.html) | Direct CUDA kernel timestamps and correlation IDs | Native input path for observed NCCL/compute kernel overlap. |
 
 ## Baseline Integrity
 

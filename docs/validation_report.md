@@ -8,15 +8,18 @@
 
 | 项目 | 结果 |
 | --- | --- |
-| 单元/集成测试 | 23/23 通过 |
+| 单元/集成测试 | 31/31 通过 |
 | Python compileall | 通过 |
 | 公共包导入 | 通过 |
 | wheel 构建与隔离安装 | `overlap_monitor-0.3.0-py3-none-any.whl` 通过 |
 | torch/Megatron/TE 直接依赖扫描 | 0 处 |
 | synthetic critical-path 结果 | 符合预期 |
 | mixed-rank clock-domain 防护 | 通过 |
-| late-wait 上界识别 | 通过 |
+| wait-return host proxy 识别 | 通过 |
 | NCCL timeline 优先策略 | 通过 |
+| CUPTI JSONL schema/parser | synthetic trace 通过 |
+| CUPTI dropped-record 防护 | 通过 |
+| native CUPTI collector | NVIDIA CUDA 12.8 headers 语法检查通过；未链接/运行 |
 
 Synthetic 示例结果：
 
@@ -26,10 +29,10 @@ exposed_communication = 35 us
 hidden_communication = 45 us
 overlap_ratio = 0.5625
 measurement_quality = estimated
-communication_runtime_kind = upper_bound
+communication_runtime_kind = host_wait_proxy
 ```
 
-这里特意标为 `estimated/upper_bound`，因为示例没有真实 NCCL completion timestamp。
+这里特意标为 `estimated/host_wait_proxy`，因为示例没有真实 NCCL completion timestamp。
 
 ## CPU 微基准
 
@@ -48,7 +51,7 @@ communication_runtime_kind = upper_bound
 
 已证明：事件模型、区间算法、Work/wait 关联、质量分级、CLI、JSONL 和 adapter 在 synthetic 场景有效；模块不会导入或修改原始 Megatron。
 
-尚未证明：在 8×A100、TE 2.7.0、真实 1F1B/MoE A2A 下，指标与 Nsight Systems 的误差范围以及训练吞吐开销。
+尚未证明：native collector 在 CUDA 12.9 上的编译/运行，以及在 8×A100、TE 2.7.0、真实 1F1B/MoE A2A 下，CUPTI 指标与 Nsight Systems 的误差范围和训练吞吐开销。
 
 ## GPU 验收门槛
 

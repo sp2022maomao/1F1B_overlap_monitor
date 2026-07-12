@@ -81,7 +81,8 @@ class CriticalPathAnalyzerTests(unittest.TestCase):
         self.assertEqual(events[0].interval, (10, 50))
         self.assertEqual(events[1].event_type, EventType.WAIT)
         self.assertEqual(events[1].interval, (45, 50))
-        self.assertEqual(events[0].metadata["runtime_kind"], "upper_bound")
+        self.assertEqual(events[0].metadata["runtime_kind"], "host_wait_proxy")
+        self.assertFalse(events[0].metadata["completion_observed"])
 
     def test_explicit_completion_avoids_late_wait_overestimate(self):
         clock = ManualClock([10, 45, 45])
@@ -93,17 +94,20 @@ class CriticalPathAnalyzerTests(unittest.TestCase):
         events = recorder.events()
 
         self.assertEqual(events[0].interval, (10, 30))
-        self.assertEqual(events[0].metadata["runtime_kind"], "observed")
+        self.assertEqual(events[0].metadata["runtime_kind"], "observed_work_window")
         self.assertEqual(events[0].metadata["completion_source"], "profiler_callback")
 
-    def test_nccl_timeline_is_preferred_over_work_upper_bound(self):
+    def test_nccl_timeline_is_preferred_over_legacy_work_upper_bound(self):
         events = [
             Event(0, 100, EventType.GEMM),
             Event(
                 10,
                 90,
                 EventType.COMMUNICATION,
-                metadata={"measurement": "async_work_lifetime", "runtime_kind": "upper_bound"},
+                metadata={
+                    "measurement": "async_work_lifetime",
+                    "runtime_kind": "upper_bound",
+                },
             ),
             Event(20, 50, EventType.NCCL, metadata={"measurement": "kernel_timeline"}),
             Event(80, 90, EventType.WAIT),

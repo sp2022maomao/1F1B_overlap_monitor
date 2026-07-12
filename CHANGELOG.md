@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add an optional native CUPTI Activity collector for concurrent GPU kernel
+  timestamps and external correlation IDs.
+- Add strict CUPTI JSONL import, dropped-record detection, runtime wrapper,
+  synthetic activity examples, and overlap integration tests.
+- Document CUPTI build/runtime use and the remaining Nsight/GPU validation
+  boundary.
 - Restructure the reference materials for public use with implementation-aligned
   metric semantics, stable upstream source links, an annotated bibliography,
   and maintained BibTeX entries.

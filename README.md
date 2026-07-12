@@ -8,9 +8,9 @@ monitoring framework for Megatron/MoE experiments.
 
 The project is designed for asynchronous training systems where direct Python
 timers or single-stream CUDA events can misrepresent real exposed communication.
-Its main focus is critical-path overlap analysis for Megatron-style async
-`Work.wait()` behavior, while still supporting kernel timeline overlap from
-PyTorch profiler or Nsight-like traces.
+Its main focus is stage-aware overlap analysis for Megatron-style asynchronous
+execution. It supports host-side `Work.wait()` proxies and observed kernel
+timelines from CUPTI, PyTorch profiler, or Nsight-like traces.
 
 ## Status
 
@@ -19,6 +19,10 @@ Open-source alpha, version `0.3.0`.
 The Python event model, analyzers, CLI, adapters, and synthetic tests are
 validated locally. Real GPU validation against TE 2.7.0, Megatron, and Nsight
 Systems is still required before making production accuracy or speedup claims.
+
+An optional native CUPTI path now provides observed GPU kernel timestamps. Its
+offline parser and overlap calculation are locally validated; native CUDA 12.9
+compilation and real Megatron/Nsight accuracy remain pending GPU validation.
 
 ## Why This Exists
 
@@ -45,8 +49,8 @@ exposed communication
 and labels measurement quality explicitly:
 
 ```text
-kernel_timeline          exact NCCL/GPU kernel interval is available
-estimated/upper_bound    only Work launch/wait observations are available
+kernel_timeline          observed NCCL/GPU kernel interval is available
+estimated/host_proxy     only Work launch/wait observations are available
 ```
 
 ## Installation
@@ -96,6 +100,15 @@ Validate event quality before analysis:
 overlap-monitor validate --input events.jsonl
 ```
 
+Import a native CUPTI activity trace:
+
+```bash
+overlap-monitor import-cupti \
+  --input cupti_rank0.jsonl \
+  --output events_rank0.jsonl \
+  --rank 0
+```
+
 Run the CPU microbenchmark:
 
 ```bash
@@ -133,6 +146,12 @@ Megatron async Work -> MegatronWorkAdapter -> WorkHandleRecorder
 events.jsonl / profiler trace -> validator -> analyzer -> report/trace
 ```
 
+The optional CUPTI route is also isolated:
+
+```text
+native CUPTI collector -> raw activity JSONL -> CuptiActivityParser -> Event JSONL
+```
+
 Package layout:
 
 ```text
@@ -147,6 +166,10 @@ overlap_monitor/
 ├── te_adapter/
 ├── tests/
 └── visualization/
+
+native/cupti_collector/
+├── include/
+└── src/
 ```
 
 Core modules do not import Megatron, PyTorch, Transformer Engine, or Nsight.
@@ -217,7 +240,7 @@ hidden_communication = intersection(NCCL, compute)
 exposed_communication = communication_runtime - hidden_communication
 ```
 
-With Work/wait events only:
+With Work/wait events only, the current analyzer computes a host-side proxy:
 
 ```text
 communication_runtime = union(Work launch -> observed completion)
@@ -226,14 +249,17 @@ hidden_communication = communication_runtime - exposed_communication
 overlap_ratio = hidden_communication / communication_runtime
 ```
 
-The Work-only path is reported as an estimated upper bound when true completion
-is only observed after `wait()` returns.
+The Work-only path is always reported as estimated. A `wait()` return is not a
+guaranteed NCCL completion bound under the default non-blocking
+ProcessGroupNCCL semantics, so precise runtime claims require a kernel timeline.
 
 ## Public API
 
 ```python
 from overlap_monitor import (
     CriticalPathOverlapAnalyzer,
+    CuptiActivityParser,
+    CuptiRuntimeCollector,
     Event,
     EventType,
     MegatronWorkAdapter,
@@ -301,6 +327,7 @@ Chrome trace output can be opened with `chrome://tracing`.
 - [Industrial reusable module design](docs/industrial_reusable_module_design.md)
 - [Validation report](docs/validation_report.md)
 - [Similar projects report](docs/similar_projects_report.md)
+- [CUPTI measurement path](docs/cupti_measurement.md)
 - [Reference materials and bibliography](references/README.md)
 - [Roadmap](ROADMAP.md)
 - [Contributing guide](CONTRIBUTING.md)

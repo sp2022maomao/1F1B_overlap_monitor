@@ -22,11 +22,11 @@ The project deliberately separates two evidence levels:
 | Mode | Evidence | Valid conclusion |
 | --- | --- | --- |
 | Kernel timeline | NCCL and compute kernel intervals from a GPU trace | Observed kernel overlap and uncovered communication time |
-| Async Work/wait | Launch, observed completion, and blocking `wait()` intervals | Critical-path wait and an estimated communication window |
+| Async Work/wait | Launch, explicit completion when available, and host `wait()` intervals | Host-side dependency proxy and an estimated communication window |
 | Generic timeline fallback | Classified communication and compute events | Approximate overlap with an explicit quality warning |
 
-A `Work` interval ending only when `wait()` returns is an upper bound, not an
-exact NCCL kernel runtime. Reports must retain the emitted
+A `Work` interval ending only when `wait()` returns is not a guaranteed
+completion bound under default ProcessGroupNCCL semantics. Reports must retain the emitted
 `measurement_quality` and `communication_runtime_kind` fields.
 
 ## Scope

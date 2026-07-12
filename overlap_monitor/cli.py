@@ -8,7 +8,9 @@ import sys
 from overlap_monitor.analyzer.critical_path import CriticalPathOverlapAnalyzer
 from overlap_monitor.analyzer.overlap import OverlapAnalyzer
 from overlap_monitor.core.io import read_events_jsonl
+from overlap_monitor.core.io import write_events_jsonl
 from overlap_monitor.core.validation import validate_events
+from overlap_monitor.profiler.cupti import CuptiActivityParser, CuptiFormatError
 from overlap_monitor.visualization.ascii_timeline import render_ascii_timeline
 from overlap_monitor.visualization.chrome_trace import write_chrome_trace
 from overlap_monitor.visualization.summary_table import render_summary_table
@@ -22,7 +24,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     analyze = subparsers.add_parser("analyze", help="Analyze an events JSONL file.")
-    analyze.add_argument("--input", required=True, type=Path, help="Input events JSONL path.")
+    analyze.add_argument(
+        "--input", required=True, type=Path, help="Input events JSONL path."
+    )
     analyze.add_argument(
         "--mode",
         choices=("critical-path", "timeline"),
@@ -50,11 +54,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     validate = subparsers.add_parser("validate", help="Validate an events JSONL file.")
-    validate.add_argument("--input", required=True, type=Path, help="Input events JSONL path.")
+    validate.add_argument(
+        "--input", required=True, type=Path, help="Input events JSONL path."
+    )
     validate.add_argument(
         "--allow-mixed-clock-domains",
         action="store_true",
         help="Treat multiple rank clock domains as valid.",
+    )
+
+    import_cupti = subparsers.add_parser(
+        "import-cupti", help="Convert native CUPTI activity JSONL into event JSONL."
+    )
+    import_cupti.add_argument("--input", required=True, type=Path)
+    import_cupti.add_argument("--output", required=True, type=Path)
+    import_cupti.add_argument("--rank", type=int)
+    import_cupti.add_argument("--stage-id", type=int)
+    import_cupti.add_argument(
+        "--allow-incomplete",
+        action="store_true",
+        help="Import traces with dropped records or unavailable timestamps.",
     )
     return parser
 
@@ -65,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
         return _analyze(args)
     if args.command == "validate":
         return _validate(args)
+    if args.command == "import-cupti":
+        return _import_cupti(args)
     return 2
 
 
@@ -111,6 +132,35 @@ def _validate(args: argparse.Namespace) -> int:
     )
     print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
     return 0 if report.valid else 2
+
+
+def _import_cupti(args: argparse.Namespace) -> int:
+    try:
+        result = CuptiActivityParser().parse_file(
+            args.input,
+            default_rank=args.rank,
+            default_stage_id=args.stage_id,
+            strict=not args.allow_incomplete,
+        )
+    except CuptiFormatError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    write_events_jsonl(result.events, args.output)
+    print(
+        json.dumps(
+            {
+                "complete": result.complete,
+                "dropped_records": result.dropped_records,
+                "event_count": len(result.events),
+                "output": str(args.output),
+                "skipped_records": result.skipped_records,
+                "warnings": result.warnings,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
 
 
 if __name__ == "__main__":

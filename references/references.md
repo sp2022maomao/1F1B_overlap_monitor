@@ -34,6 +34,7 @@ Megatron baseline.
 
 ## Profiling and Trace Infrastructure
 
+- [NVIDIA CUPTI Activity API](https://docs.nvidia.com/cupti/api/group__CUPTI__ACTIVITY__API.html). Primary API reference for asynchronous CUDA activity records, correlation IDs, and dropped-record accounting.
 - [NVIDIA Nsight Systems User Guide](https://docs.nvidia.com/nsight-systems/UserGuide/index.html). Primary reference for CUDA, NCCL, NVTX, and system timeline collection.
 - [PyTorch Profiler](https://docs.pytorch.org/docs/stable/profiler.html). Official API documentation for collecting operator and CUDA activity traces.
 - [Kineto](https://github.com/pytorch/kineto). Canonical repository for the profiling backend used by PyTorch.

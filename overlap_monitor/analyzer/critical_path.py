@@ -4,7 +4,12 @@ from dataclasses import asdict, dataclass, field
 
 from overlap_monitor.analyzer.overlap import COMPUTE_TYPES, COMMUNICATION_TYPES
 from overlap_monitor.core.events import Event, EventType
-from overlap_monitor.core.intervals import interval_total, intersection_total, merge_intervals, span
+from overlap_monitor.core.intervals import (
+    interval_total,
+    intersection_total,
+    merge_intervals,
+    span,
+)
 
 
 WAIT_FAMILY = "WAIT"
@@ -80,7 +85,11 @@ class CriticalPathOverlapAnalyzer:
             event
             for event in events
             if event.event_type == EventType.NCCL
-            or event.metadata.get("measurement") in {"kernel_timeline", "nsight_timeline"}
+            or (
+                event.event_type == EventType.COMMUNICATION
+                and event.metadata.get("measurement")
+                in {"kernel_timeline", "nsight_timeline"}
+            )
         ]
 
     def work_lifetime_events(self, events: list[Event]) -> list[Event]:
@@ -102,20 +111,30 @@ class CriticalPathOverlapAnalyzer:
     def _analyze_group(
         self, events: list[Event], group_id: str, include_subgroups: bool
     ) -> CriticalPathSummary:
-        compute_intervals = merge_intervals(event.interval for event in self.compute_events(events))
+        compute_intervals = merge_intervals(
+            event.interval for event in self.compute_events(events)
+        )
         precise_communication = self.precise_communication_events(events)
         work_lifetimes = self.work_lifetime_events(events)
         selected_communication = precise_communication or work_lifetimes
         if not selected_communication:
             selected_communication = self.communication_events(events)
-        communication_intervals = merge_intervals(event.interval for event in selected_communication)
+        communication_intervals = merge_intervals(
+            event.interval for event in selected_communication
+        )
         work_intervals = merge_intervals(event.interval for event in work_lifetimes)
-        wait_intervals = merge_intervals(event.interval for event in self.wait_events(events))
+        wait_intervals = merge_intervals(
+            event.interval for event in self.wait_events(events)
+        )
 
         compute_time = interval_total(compute_intervals, already_merged=True)
-        communication_runtime = interval_total(communication_intervals, already_merged=True)
+        communication_runtime = interval_total(
+            communication_intervals, already_merged=True
+        )
         wait_time = intersection_total(
-            work_intervals or communication_intervals, wait_intervals, already_merged=True
+            work_intervals or communication_intervals,
+            wait_intervals,
+            already_merged=True,
         )
 
         warnings: list[str] = []
@@ -123,38 +142,50 @@ class CriticalPathOverlapAnalyzer:
             hidden_communication = intersection_total(
                 compute_intervals, communication_intervals, already_merged=True
             )
-            exposed_communication = max(communication_runtime - hidden_communication, 0.0)
+            exposed_communication = max(
+                communication_runtime - hidden_communication, 0.0
+            )
             measurement_quality = "kernel_timeline"
             runtime_kind = "observed_kernel_runtime"
         elif wait_intervals:
             exposed_communication = wait_time
-            hidden_communication = max(communication_runtime - exposed_communication, 0.0)
-            upper_bound = any(
-                event.metadata.get("runtime_kind", "upper_bound") == "upper_bound"
-                for event in selected_communication
+            hidden_communication = max(
+                communication_runtime - exposed_communication, 0.0
             )
             measurement_quality = "estimated"
-            runtime_kind = "upper_bound" if upper_bound else "observed_work_window"
-            if upper_bound:
+            runtime_kinds = {
+                event.metadata.get("runtime_kind", "host_wait_proxy")
+                for event in selected_communication
+            }
+            if runtime_kinds & {"host_wait_proxy", "upper_bound", "unbounded"}:
+                runtime_kind = "host_wait_proxy"
                 warnings.append(
                     "communication_runtime and hidden_communication are estimates because "
-                    "completion was observed only when wait() returned"
+                    "wait() return is a host-side observation, not a guaranteed NCCL completion"
                 )
+            else:
+                runtime_kind = "observed_work_window"
         else:
             hidden_communication = intersection_total(
                 compute_intervals, communication_intervals, already_merged=True
             )
-            exposed_communication = max(communication_runtime - hidden_communication, 0.0)
+            exposed_communication = max(
+                communication_runtime - hidden_communication, 0.0
+            )
             measurement_quality = "timeline_fallback"
             runtime_kind = "generic_event_runtime"
-            warnings.append("no Work.wait event was available for critical-path attribution")
+            warnings.append(
+                "no Work.wait event was available for critical-path attribution"
+            )
 
         overlap_ratio = (
             hidden_communication / communication_runtime
             if communication_runtime > 0
             else 0.0
         )
-        critical_span = self._critical_span(compute_intervals, communication_intervals, wait_intervals)
+        critical_span = self._critical_span(
+            compute_intervals, communication_intervals, wait_intervals
+        )
         group_metrics = self._group_metrics(events) if include_subgroups else []
 
         return CriticalPathSummary(
@@ -179,7 +210,9 @@ class CriticalPathOverlapAnalyzer:
 
         metrics = []
         for group_id, group_events in sorted(by_group.items()):
-            summary = self._analyze_group(group_events, group_id, include_subgroups=False)
+            summary = self._analyze_group(
+                group_events, group_id, include_subgroups=False
+            )
             metrics.append(
                 CriticalPathGroupMetrics(
                     group_id=group_id,
@@ -208,7 +241,9 @@ class CriticalPathOverlapAnalyzer:
         communication_intervals: list[tuple[float, float]],
         wait_intervals: list[tuple[float, float]],
     ) -> float:
-        active_span = span([*compute_intervals, *communication_intervals, *wait_intervals])
+        active_span = span(
+            [*compute_intervals, *communication_intervals, *wait_intervals]
+        )
         if active_span is None:
             return 0.0
         return active_span[1] - active_span[0]

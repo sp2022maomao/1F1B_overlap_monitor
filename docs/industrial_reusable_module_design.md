@@ -127,15 +127,15 @@ wait_end
 生成 Work 观测事件：
 
 ```text
-COMMUNICATION: launch_time -> observed completion
+COMMUNICATION: launch_time -> completion observation / wait-return proxy
 WAIT:          wait_start  -> wait_end
 ```
 
-若 completion 只在 `wait()` 返回时观测到，前一个区间是上界，报告标记：
+若只有 `wait()` 返回这一 host-side 观测，报告标记：
 
 ```text
 measurement_quality = estimated
-communication_runtime_kind = upper_bound
+communication_runtime_kind = host_wait_proxy
 ```
 
 若同时取得 PyTorch profiler/Nsight NCCL kernel timeline，则优先使用 kernel 区间：
@@ -147,7 +147,7 @@ exposed_communication = communication_runtime - hidden_communication
 measurement_quality = kernel_timeline
 ```
 
-这样不会把 Work 生命周期上界与真实 NCCL kernel runtime 混为一谈。
+这样不会把 Work host proxy 与真实 NCCL kernel runtime 混为一谈。
 
 ## 工业化保护
 
@@ -263,7 +263,7 @@ python3 -m unittest discover \
 
 ## 已知边界
 
-`WorkHandleRecorder` 在没有底层 CUDA/NCCL completion timestamp 时，用 `wait_end` 作为 Work 完成观测点。因此 `communication_runtime` 是保守上界，结果会带 warning；不能将其作为精确 kernel runtime 引用。
+`WorkHandleRecorder` 在没有底层 CUDA/NCCL completion timestamp 时，用 `wait_end` 结束 host-side 观测窗口，并标记为 `host_wait_proxy`。默认 ProcessGroupNCCL 下该时间既不保证是 completion，也不保证是上界，不能将其作为精确 kernel runtime 或 GPU stall 引用。
 
 如果需要更精确的通信 kernel runtime，应同时导入 PyTorch profiler 或 Nsight Systems 事件，再用 `OverlapAnalyzer` 做 kernel timeline overlap，对照 critical-path 结果。
 
