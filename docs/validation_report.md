@@ -2,7 +2,9 @@
 
 ## 验证范围
 
-本报告验证 v0.3.0 的纯 Python 逻辑、接口、解耦性和本机 CPU 开销。未使用远程 GPU，因此不包含 TE 2.7.0/Megatron 真实训练吞吐或 Nsight 精度对照。
+本报告记录 v0.3.0 的纯 Python 基础验证。后续 RTX 4090 CUPTI smoke test
+见 [`validation_4090_20260713.md`](validation_4090_20260713.md)。TE 2.7.0、
+Megatron 真实训练吞吐和 Nsight 精度对照仍未完成。
 
 ## 结果
 

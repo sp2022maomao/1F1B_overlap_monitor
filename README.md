@@ -17,12 +17,15 @@ timelines from CUPTI, PyTorch profiler, or Nsight-like traces.
 Open-source alpha, version `0.3.0`.
 
 The Python event model, analyzers, CLI, adapters, and synthetic tests are
-validated locally. Real GPU validation against TE 2.7.0, Megatron, and Nsight
-Systems is still required before making production accuracy or speedup claims.
+validated locally. The native collector has also passed a bounded two-GPU
+RTX 4090 NCCL/GEMM smoke test. Validation against TE 2.7.0, Megatron 1F1B, and
+Nsight Systems is still required before making production accuracy or speedup
+claims.
 
 An optional native CUPTI path now provides observed GPU kernel timestamps. Its
-offline parser and overlap calculation are locally validated; native CUDA 12.9
-compilation and real Megatron/Nsight accuracy remain pending GPU validation.
+CUDA 12.1 collector, offline parser, correlation IDs, and overlap calculation
+have been exercised on RTX 4090. CUDA 12.9, TE 2.7.0, and real
+Megatron/Nsight accuracy remain pending.
 
 ## Why This Exists
 
@@ -326,6 +329,7 @@ Chrome trace output can be opened with `chrome://tracing`.
 - [Async measurement design](docs/async_measurement_design.md)
 - [Industrial reusable module design](docs/industrial_reusable_module_design.md)
 - [Validation report](docs/validation_report.md)
+- [RTX 4090 CUPTI validation](docs/validation_4090_20260713.md)
 - [Similar projects report](docs/similar_projects_report.md)
 - [CUPTI measurement path](docs/cupti_measurement.md)
 - [Reference materials and bibliography](references/README.md)
