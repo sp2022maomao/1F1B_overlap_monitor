@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Move tests, examples, and benchmarks out of the installable package and
+  consolidate project documentation around architecture, integration,
+  measurement semantics, and validation.
+- Classify PyTorch Profiler events on import, tighten Transformer Engine kernel
+  detection, optimize batched event recording, add bounded-window recorder
+  cleanup, and make overlap-ratio denominators explicit in every summary.
+- Let `overlap-monitor analyze` auto-detect native CUPTI JSONL and analyze it
+  without a separate import step.
+- Add normalized-event output, explicit microsecond units, `--version`, empty
+  trace rejection, and concise CLI errors.
+- Restructure the English and Chinese READMEs around one primary workflow and
+  add a documentation index.
 - Add an optional native CUPTI Activity collector for concurrent GPU kernel
   timestamps and external correlation IDs.
 - Add strict CUPTI JSONL import, dropped-record detection, runtime wrapper,

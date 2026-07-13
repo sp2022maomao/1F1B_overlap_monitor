@@ -9,14 +9,27 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install .
-      - run: python -m unittest discover -s overlap_monitor/tests -p 'test_*.py'
+      - run: python -m unittest discover -s tests -p 'test_*.py'
+
+  package-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ".[dev]"
+      - run: ruff check .
+      - run: python -m build
+      - run: python -m pip install --force-reinstall dist/*.whl
+      - run: overlap-monitor --version
 
   cupti-header-check:
     runs-on: ubuntu-latest

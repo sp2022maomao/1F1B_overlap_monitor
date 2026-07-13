@@ -4,7 +4,6 @@ from collections import defaultdict
 
 from overlap_monitor.core.events import Event, EventType
 
-
 SYMBOLS = {
     EventType.COMPUTE: "C",
     EventType.GEMM: "G",

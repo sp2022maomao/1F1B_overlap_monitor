@@ -7,6 +7,12 @@ from overlap_monitor.core.validation import validate_events
 
 
 class ValidationTests(unittest.TestCase):
+    def test_rejects_empty_trace(self):
+        report = validate_events([])
+
+        self.assertFalse(report.valid)
+        self.assertEqual(report.issues[0].code, "empty_trace")
+
     def test_rejects_mixed_rank_clock_domains(self):
         events = [
             Event(0, 10, EventType.GEMM, rank=0),

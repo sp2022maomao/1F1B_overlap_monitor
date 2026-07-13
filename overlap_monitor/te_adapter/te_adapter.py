@@ -70,7 +70,12 @@ class TEAdapter:
 
     def classify_kernel(self, name: str) -> TEKernelInfo:
         lowered = name.lower()
-        is_te = "transformer_engine" in lowered or "nvte" in lowered or "te_" in lowered
+        is_te = (
+            "transformer_engine" in lowered
+            or "nvte" in lowered
+            or lowered.startswith("te_")
+            or any(marker in lowered for marker in ("::te_", "/te_", "_te_"))
+        )
         precision = None
         if "fp8" in lowered:
             precision = "fp8"

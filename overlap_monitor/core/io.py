@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import tempfile
 from collections.abc import Iterable
+from pathlib import Path
 
 from overlap_monitor.core.events import Event, event_from_mapping
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +112,7 @@ class CuptiActivityParser:
                     "collector": "cupti",
                     "measurement": "kernel_timeline",
                     "runtime_kind": "observed_kernel_runtime",
+                    "timestamp_unit": "us",
                     "source_timestamp_unit": "ns",
                     "clock_domain": f"cupti:pid={process_id}:device={device_id}",
                     "stream_id": self._required_int(record, "stream_id"),

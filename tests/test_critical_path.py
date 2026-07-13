@@ -83,6 +83,10 @@ class CriticalPathAnalyzerTests(unittest.TestCase):
         self.assertEqual(events[1].interval, (45, 50))
         self.assertEqual(events[0].metadata["runtime_kind"], "host_wait_proxy")
         self.assertFalse(events[0].metadata["completion_observed"])
+        self.assertNotIn("_time_source", events[0].metadata)
+
+        self.assertEqual(recorder.clear(), 1)
+        self.assertEqual(recorder.events(), [])
 
     def test_explicit_completion_avoids_late_wait_overestimate(self):
         clock = ManualClock([10, 45, 45])

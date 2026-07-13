@@ -7,7 +7,6 @@ from typing import Any, Callable
 
 from overlap_monitor.core.events import Event, EventType
 
-
 TimeSource = Callable[[], float]
 
 
@@ -20,6 +19,7 @@ class WorkRecord:
     comm_id: str
     name: str
     launch_time: float
+    time_source: TimeSource = field(repr=False, compare=False)
     stage_id: int | None = None
     rank: int | None = None
     device_id: int | None = None
@@ -39,7 +39,7 @@ class ObservedWork:
         self.record = record
 
     def wait(self, *args: Any, **kwargs: Any) -> Any:
-        time_source = self.record.metadata["_time_source"]
+        time_source = self.record.time_source
         wait_start = time_source()
         try:
             return self._work.wait(*args, **kwargs)
@@ -54,7 +54,7 @@ class ObservedWork:
         self, timestamp: float | None = None, *, source: str = "adapter_observation"
     ) -> None:
         """Record a completion observed by an adapter or profiler callback."""
-        time_source = self.record.metadata["_time_source"]
+        time_source = self.record.time_source
         completion_time = time_source() if timestamp is None else timestamp
         with self.record.lock:
             if completion_time < self.record.launch_time:
@@ -97,10 +97,11 @@ class WorkHandleRecorder:
             comm_id=comm_id,
             name=name,
             launch_time=self.time_source(),
+            time_source=self.time_source,
             stage_id=stage_id,
             rank=rank,
             device_id=device_id,
-            metadata={**metadata, "_time_source": self.time_source},
+            metadata=dict(metadata),
         )
         with self._lock:
             self.records.append(record)
@@ -115,9 +116,16 @@ class WorkHandleRecorder:
                 events.extend(self._record_events(record))
         return events
 
+    def clear(self) -> int:
+        """Discard recorded history after the caller has persisted its events."""
+        with self._lock:
+            count = len(self.records)
+            self.records.clear()
+        return count
+
     def _record_events(self, record: WorkRecord) -> list[Event]:
         events: list[Event] = []
-        metadata = self._public_metadata(record)
+        metadata = dict(record.metadata)
         observation_end = (
             record.completion_time or record.wait_end or record.launch_time
         )
@@ -143,6 +151,7 @@ class WorkHandleRecorder:
                     "completion_observed": record.completion_time is not None,
                     "completion_source": record.completion_source or "not_observed",
                     "runtime_kind": runtime_kind,
+                    "timestamp_unit": "us",
                 },
             )
         )
@@ -161,14 +170,8 @@ class WorkHandleRecorder:
                         "comm_id": record.comm_id,
                         "event_family": EventType.WAIT.value,
                         "measurement": "critical_path_wait",
+                        "timestamp_unit": "us",
                     },
                 )
             )
         return events
-
-    def _public_metadata(self, record: WorkRecord) -> dict[str, Any]:
-        return {
-            key: value
-            for key, value in record.metadata.items()
-            if not key.startswith("_")
-        }

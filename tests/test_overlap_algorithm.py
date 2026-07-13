@@ -17,6 +17,10 @@ class OverlapAlgorithmTests(unittest.TestCase):
         self.assertEqual(summary.communication_time, 10)
         self.assertEqual(summary.overlap_time, 5)
         self.assertEqual(summary.overlap_ratio, 0.5)
+        self.assertEqual(
+            summary.to_dict()["overlap_ratio_definition"],
+            "overlap_time / min(compute_time, communication_time)",
+        )
 
     def test_stage_balance_and_bubble(self):
         events = [

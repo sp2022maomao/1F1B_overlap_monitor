@@ -11,8 +11,11 @@ independent from Megatron, PyTorch, Transformer Engine, and Nsight imports.
 ## Development Setup
 
 ```bash
-python3 -m pip install -e .
-python3 -m unittest discover -s overlap_monitor/tests -p 'test_*.py'
+python3 -m pip install --upgrade pip
+python3 -m pip install -e ".[dev]"
+ruff check .
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 -m build
 ```
 
 Optional GPU integrations may depend on:
@@ -28,8 +31,8 @@ Nsight Systems / PyTorch profiler traces
 - Keep the original benchmark behavior reproducible.
 - Do not add global CUDA synchronization in runtime recorders.
 - Do not import Megatron, torch, or transformer_engine from core modules.
-- Mark Work-handle completion windows as estimated upper bounds unless a true
-  NCCL/GPU kernel timeline is available.
+- Mark Work/wait measurements as host-side proxies unless a true NCCL/GPU
+  kernel timeline is available.
 - Add or update tests for every behavior change.
 - Update docs when changing public API, metrics, or measurement semantics.
 
@@ -38,8 +41,8 @@ Nsight Systems / PyTorch profiler traces
 For pure Python changes:
 
 ```bash
-python3 -m unittest discover -s overlap_monitor/tests -p 'test_*.py'
-python3 -m overlap_monitor.benchmarks.benchmark_runtime
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 -m benchmarks.benchmark_runtime
 ```
 
 For GPU changes, include:

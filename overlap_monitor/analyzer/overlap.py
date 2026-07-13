@@ -3,9 +3,13 @@ from __future__ import annotations
 from collections import defaultdict
 
 from overlap_monitor.core.events import Event, EventType
-from overlap_monitor.core.intervals import interval_total, intersection_total, merge_intervals, span
+from overlap_monitor.core.intervals import (
+    intersection_total,
+    interval_total,
+    merge_intervals,
+    span,
+)
 from overlap_monitor.core.metrics import OverlapSummary, StageMetrics
-
 
 COMPUTE_TYPES = {EventType.COMPUTE, EventType.GEMM, EventType.ATTENTION}
 COMMUNICATION_TYPES = {EventType.COMMUNICATION, EventType.NCCL}

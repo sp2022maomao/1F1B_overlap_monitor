@@ -42,6 +42,14 @@ class ValidationReport:
 
 def validate_events(events: list[Event], *, strict_clock_domain: bool = True) -> ValidationReport:
     issues: list[ValidationIssue] = []
+    if not events:
+        issues.append(
+            ValidationIssue(
+                Severity.ERROR,
+                "empty_trace",
+                "the trace contains no events after applying filters",
+            )
+        )
     domains = sorted({_clock_domain(event) for event in events})
     if strict_clock_domain and len(domains) > 1:
         issues.append(

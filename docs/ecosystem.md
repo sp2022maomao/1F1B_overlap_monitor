@@ -1,6 +1,6 @@
 # Similar Projects Report
 
-Date: 2026-07-12
+Updated: 2026-07-13
 
 This report summarizes existing related projects and the positioning of
 `overlap-monitor`.
@@ -22,6 +22,23 @@ I did not find an open-source project that directly matches the exact scope:
 ```text
 standalone 1F1B + Megatron/MoE + async Work/wait critical-path overlap monitor
 ```
+
+## Repository Design References
+
+The public repository layout also follows conventions shared by mature related
+projects reviewed on 2026-07-13:
+
+| Project | GitHub stars at review | Relevant convention |
+| --- | ---: | --- |
+| [DeepSpeed](https://github.com/deepspeedai/DeepSpeed) | 42.7k | top-level package, tests, examples, benchmarks, docs, and contributor policy |
+| [Megatron-LM](https://github.com/NVIDIA/Megatron-LM) | 17.0k | concise getting started, explicit project structure, top-level tests/examples/tools |
+| [TransformerEngine](https://github.com/NVIDIA/TransformerEngine) | 3.4k | optional native code, package/runtime separation, examples and QA outside the package |
+| [Kineto](https://github.com/pytorch/kineto) | 970 | narrow profiler scope with separate library, tools, and benchmarks |
+
+The useful common pattern is separation of installable runtime code from tests,
+examples, benchmarks, and long-form documentation. The project adopts that
+pattern without copying the large-framework build complexity these repositories
+need.
 
 The closest projects are either full training frameworks, low-level profiler
 systems, trace analyzers, or NCCL/kernel-focused tools.
@@ -54,7 +71,7 @@ The differentiators are:
 
 - stage-aware 1F1B event model
 - critical-path exposed communication metrics
-- Work-handle upper-bound labeling
+- Work/wait host-side proxy labeling
 - kernel timeline and Work/wait analysis paths in one library
 - no hard dependency on Megatron, torch, Transformer Engine, or Nsight in core
 - small synthetic tests that verify overlap math independent of GPU hardware
@@ -77,7 +94,7 @@ training speedup
 exact NCCL runtime from Work-only events
 ```
 
-until the GPU validation plan in `docs/validation_report.md` is completed.
+until the GPU validation plan in `docs/validation.md` is completed.
 
 ## Next Competitive Step
 

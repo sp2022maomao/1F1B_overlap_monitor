@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
+from overlap_monitor import __version__
 from overlap_monitor.analyzer.critical_path import CriticalPathOverlapAnalyzer
 from overlap_monitor.analyzer.overlap import OverlapAnalyzer
-from overlap_monitor.core.io import read_events_jsonl
-from overlap_monitor.core.io import write_events_jsonl
+from overlap_monitor.core.events import Event
+from overlap_monitor.core.io import (
+    JsonlFormatError,
+    read_events_jsonl,
+    write_events_jsonl,
+)
 from overlap_monitor.core.validation import validate_events
 from overlap_monitor.profiler.cupti import CuptiActivityParser, CuptiFormatError
 from overlap_monitor.visualization.ascii_timeline import render_ascii_timeline
@@ -20,12 +25,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="overlap-monitor",
         description="Analyze 1F1B communication-computation overlap events.",
+        epilog=(
+            "example: overlap-monitor analyze --input trace.jsonl --table "
+            "--output-json summary.json"
+        ),
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    analyze = subparsers.add_parser("analyze", help="Analyze an events JSONL file.")
+    analyze = subparsers.add_parser("analyze", help="Analyze a trace JSONL file.")
     analyze.add_argument(
         "--input", required=True, type=Path, help="Input events JSONL path."
+    )
+    analyze.add_argument(
+        "--input-format",
+        choices=("auto", "events", "cupti"),
+        default="auto",
+        help="Input format. Auto detects native CUPTI records (default: auto).",
     )
     analyze.add_argument(
         "--mode",
@@ -35,6 +51,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     analyze.add_argument("--rank", type=int, help="Analyze one rank only.")
     analyze.add_argument("--device-id", type=int, help="Analyze one device only.")
+    analyze.add_argument(
+        "--stage-id",
+        type=int,
+        help="Analyze one stage; also assigns missing CUPTI stage IDs.",
+    )
+    analyze.add_argument(
+        "--allow-incomplete",
+        action="store_true",
+        help="Allow CUPTI traces with dropped records or unavailable timestamps.",
+    )
+    analyze.add_argument(
+        "--events-output",
+        type=Path,
+        help="Write normalized events JSONL before analysis.",
+    )
     analyze.add_argument(
         "--allow-mixed-clock-domains",
         action="store_true",
@@ -80,21 +111,29 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.command == "analyze":
-        return _analyze(args)
-    if args.command == "validate":
-        return _validate(args)
-    if args.command == "import-cupti":
-        return _import_cupti(args)
+    try:
+        if args.command == "analyze":
+            return _analyze(args)
+        if args.command == "validate":
+            return _validate(args)
+        if args.command == "import-cupti":
+            return _import_cupti(args)
+    except (JsonlFormatError, CuptiFormatError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     return 2
 
 
 def _analyze(args: argparse.Namespace) -> int:
-    events = read_events_jsonl(args.input)
+    events = _load_analysis_events(args)
     if args.rank is not None:
         events = [event for event in events if event.rank == args.rank]
     if args.device_id is not None:
         events = [event for event in events if event.device_id == args.device_id]
+    if args.stage_id is not None:
+        events = [event for event in events if event.stage_id == args.stage_id]
+    if args.events_output:
+        write_events_jsonl(events, args.events_output)
     report = validate_events(
         events, strict_clock_domain=not args.allow_mixed_clock_domains
     )
@@ -106,7 +145,13 @@ def _analyze(args: argparse.Namespace) -> int:
     else:
         summary = OverlapAnalyzer().analyze(events)
 
-    payload = summary.to_dict()
+    payload = {
+        "schema_version": 1,
+        "analysis_mode": args.mode,
+        "timestamp_unit": "us",
+        "validation": report.to_dict(),
+        **summary.to_dict(),
+    }
     if args.output_json:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(
@@ -119,10 +164,44 @@ def _analyze(args: argparse.Namespace) -> int:
     if args.ascii:
         print(render_ascii_timeline(events))
     if args.table:
-        print(render_summary_table(summary))
+        print(render_summary_table(summary, timestamp_unit="us"))
     if not args.output_json and not args.table:
         print(json.dumps(payload, indent=2, sort_keys=True))
     return 0
+
+
+def _load_analysis_events(args: argparse.Namespace) -> list[Event]:
+    input_format = args.input_format
+    if input_format == "auto":
+        input_format = _detect_input_format(args.input)
+    if input_format == "cupti":
+        return CuptiActivityParser().parse_file(
+            args.input,
+            default_rank=args.rank,
+            default_stage_id=args.stage_id,
+            strict=not args.allow_incomplete,
+        ).events
+    return read_events_jsonl(args.input)
+
+
+def _detect_input_format(path: Path) -> str:
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise JsonlFormatError(
+                    f"invalid JSON at {path}:{line_number}: {exc}"
+                ) from exc
+            if not isinstance(payload, dict):
+                raise JsonlFormatError(
+                    f"invalid JSONL record at {path}:{line_number}: expected object"
+                )
+            return "cupti" if "record_kind" in payload else "events"
+    return "events"
 
 
 def _validate(args: argparse.Namespace) -> int:
@@ -135,16 +214,12 @@ def _validate(args: argparse.Namespace) -> int:
 
 
 def _import_cupti(args: argparse.Namespace) -> int:
-    try:
-        result = CuptiActivityParser().parse_file(
-            args.input,
-            default_rank=args.rank,
-            default_stage_id=args.stage_id,
-            strict=not args.allow_incomplete,
-        )
-    except CuptiFormatError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
+    result = CuptiActivityParser().parse_file(
+        args.input,
+        default_rank=args.rank,
+        default_stage_id=args.stage_id,
+        strict=not args.allow_incomplete,
+    )
     write_events_jsonl(result.events, args.output)
     print(
         json.dumps(

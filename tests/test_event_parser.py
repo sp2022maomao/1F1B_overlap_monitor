@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import unittest
 import tempfile
+import unittest
 from pathlib import Path
 
 from overlap_monitor.core.events import EventType
-from overlap_monitor.profiler import PyTorchProfilerEventParser, TimelineNormalizer
 from overlap_monitor.core.io import JsonlFormatError, read_events_jsonl
+from overlap_monitor.profiler import PyTorchProfilerEventParser, TimelineNormalizer
 
 
 class FakeRange:
@@ -30,6 +30,8 @@ class EventParserTests(unittest.TestCase):
         self.assertEqual(events[0].timestamp_start, 1)
         self.assertEqual(events[0].rank, 2)
         self.assertEqual(events[0].stage_id, 1)
+        self.assertEqual(events[0].event_type, EventType.NCCL)
+        self.assertEqual(events[0].metadata["collector"], "pytorch_profiler")
 
     def test_normalizer_classifies_records(self):
         normalizer = TimelineNormalizer()

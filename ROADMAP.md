@@ -1,31 +1,31 @@
 # Roadmap
 
-## v0.2.x: Open-Source Alpha
+## Completed in 0.3.x
 
-- Keep the standalone Python package installable.
-- Keep unit tests passing on Python 3.10 and 3.12.
-- Maintain strict separation between core analysis and Megatron/PyTorch runtime
-  integrations.
-- Document measurement quality and upper-bound semantics clearly.
+- Stable package and CLI names: `overlap_monitor` and `overlap-monitor`.
+- Decoupled event model, timeline analyzer, and critical-path analyzer.
+- Explicit `kernel_timeline`, `estimated`, and `host_wait_proxy` semantics.
+- Native CUPTI collector, strict JSONL parser, and direct CLI analysis path.
+- Bounded two-GPU RTX 4090 NCCL/GEMM smoke validation.
+- Python 3.10-3.12 CI, Ruff checks, and wheel/sdist build checks.
 
-## v0.3.0: GPU Validation
+## 0.4.0: Target-Stack Validation
 
-- Validate Work-handle critical-path metrics against Nsight Systems traces.
-- Add a minimal Megatron-Core/MoE integration example.
-- Add an A100-class benchmark report with monitor-off, Work-only, and
-  profiler/Nsight modes.
-- Define acceptable error and overhead thresholds.
+- Build and run the native CUPTI collector on CUDA 12.9.
+- Validate Transformer Engine 2.7 kernel classification.
+- Add a minimal real Megatron-Core/MoE 1F1B integration example.
+- Compare CUPTI metrics and overhead against Nsight Systems on the same trace.
+- Publish A100-class monitor-off, Work-only, CUPTI, and Nsight results.
 
-## v0.4.0: Trace Interoperability
+## 0.5.0: Trace Interoperability
 
-- Improve PyTorch profiler trace import.
-- Validate and stabilize the initial native CUPTI collector on CUDA 12.9.
-- Add richer Chrome trace export categories.
-- Add optional Nsight SQLite ingestion if the dependency footprint stays clean.
-- Add stage-aware 1F1B summaries across rank groups.
+- Improve PyTorch Profiler trace import.
+- Add optional Nsight SQLite ingestion if dependencies remain isolated.
+- Add richer Chrome trace categories and rank-group summaries.
+- Stabilize stage, microbatch, iteration, and phase correlation metadata.
 
-## v1.0.0: Stable API
+## 1.0.0: Stable API
 
-- Freeze the public event schema and summary fields.
-- Publish GPU-validated accuracy/overhead claims.
-- Add versioned migration notes for downstream Megatron integrations.
+- Freeze the event schema, timestamp units, and summary fields.
+- Publish validated accuracy and overhead bounds.
+- Add versioned migrations for downstream Megatron integrations.

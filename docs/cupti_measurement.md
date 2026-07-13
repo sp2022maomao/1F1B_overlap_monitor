@@ -1,87 +1,69 @@
-# CUPTI Measurement Path
+# CUPTI Measurement
 
-The optional CUPTI path records GPU kernel execution intervals directly and
-feeds them into the existing timeline analyzers. It is decoupled from Megatron,
-PyTorch, and the Work-handle recorder.
+The optional native collector records GPU kernel intervals and feeds them into
+the same analyzers used by normalized profiler events. It is isolated from
+Megatron, PyTorch, and the Work/wait adapter.
 
-## Architecture
+## Profiler Granularity
+
+| Tool | Data granularity | Main role |
+| --- | --- | --- |
+| CUPTI | Low-level CUDA activity and kernel records | Capture raw NCCL and compute kernel intervals |
+| Nsight Systems | System-level CPU/GPU/stream timeline | Inspect and validate cross-stream concurrency |
+| PyTorch Profiler | Framework operator/module/autograd level | Connect framework operations to CUDA activity |
+
+CUPTI is the lowest-level collection interface. Nsight Systems provides an
+integrated system view, while PyTorch Profiler preserves framework semantics.
+The monitor normalizes all supported sources but keeps their evidence quality
+explicit.
+
+## Data Flow
 
 ```text
-Megatron / PyTorch workload
-  -> optional external correlation ranges
+Megatron or PyTorch workload
   -> native CUPTI Activity collector
-       -> concurrent kernel records (start/end/stream/correlation)
-       -> dropped-record accounting
-  -> CUPTI activity JSONL
-  -> CuptiActivityParser
-  -> overlap-monitor Event JSONL
-  -> OverlapAnalyzer / CriticalPathOverlapAnalyzer
+  -> raw CUPTI JSONL
+  -> parser and kernel classifier
+  -> normalized Event JSONL (microseconds)
+  -> validation
+  -> overlap analyzer
 ```
 
-The native callback only copies completed activity records into a bounded
-in-memory buffer. Kernel classification, JSON parsing, and overlap calculation
-run after collection.
+The callback copies completed activity records into a bounded in-memory buffer.
+Kernel classification and overlap calculation happen after collection.
 
-## What It Measures
-
-CUPTI kernel records provide nanosecond timestamps for observed GPU execution:
-
-```text
-communication_runtime = duration(union(classified NCCL kernels))
-compute_runtime       = duration(union(classified compute kernels))
-overlap_time          = duration(intersection(NCCL, compute))
-```
-
-The parser converts timestamps to microseconds and adds:
-
-```json
-{
-  "collector": "cupti",
-  "measurement": "kernel_timeline",
-  "runtime_kind": "observed_kernel_runtime",
-  "stream_id": 11,
-  "correlation_id": 101,
-  "source_timestamp_unit": "ns"
-}
-```
-
-This path replaces the Work/wait completion estimate for kernel-runtime and
-timeline-overlap metrics. It does not prove that every uncovered communication
-interval is on the end-to-end training critical path. That attribution still
-requires iteration, stage, microbatch, phase, and dependency context.
-
-## Build
-
-Requirements:
+## Requirements
 
 ```text
 Linux
 CMake >= 3.20
-CUDA Toolkit with CUPTI headers and libcupti (target: CUDA 12.9)
+CUDA Toolkit with CUPTI headers and libcupti
 ```
 
-Build the optional shared library:
+The target deployment is CUDA 12.9. The Python package itself does not link
+against CUPTI and remains usable on systems without CUDA.
+
+## Build
 
 ```bash
 cmake -S native/cupti_collector -B build/cupti -DCMAKE_BUILD_TYPE=Release
 cmake --build build/cupti --parallel
 ```
 
-The output is normally:
+Expected output:
 
 ```text
 build/cupti/liboverlap_cupti.so
 ```
 
-The Python package does not link against CUPTI. Systems without CUDA can still
-install and test all offline analysis modules.
+## Capture
 
-## Runtime Collection
-
-Load the library explicitly and bound the profiling window:
+Keep the profiling window short and representative:
 
 ```python
 from pathlib import Path
+
+import torch
 
 from overlap_monitor import CuptiRuntimeCollector
 
@@ -91,28 +73,42 @@ collector.start(Path("cupti_rank0.jsonl"), rank=0)
 with collector.external_range(1001):
     run_profiled_steps()
 
-# Complete outstanding GPU work before stop(). The collector does not add an
-# implicit CUDA synchronization because that would change the measured path.
+# The caller owns synchronization. The collector does not alter training order.
 torch.cuda.synchronize()
 collector.stop()
 ```
 
-External IDs are user-defined. A Megatron integration can map them to
-iteration/stage/microbatch/phase metadata in a sidecar file. CUPTI correlates
-the external ID with CUDA API and kernel correlation IDs.
+External IDs can represent an iteration, stage, microbatch, or phase. Their
+meaning should be recorded in experiment metadata or a sidecar file.
 
-The collector defaults to 2,097,152 in-memory records. Override the bound with:
+The default in-memory limit is 2,097,152 records:
 
 ```bash
 export OVERLAP_CUPTI_MAX_RECORDS=4194304
 ```
 
-Use a short, representative profiling window rather than tracing an entire
-training run.
+Increase it only when the bounded trace reports dropped client records.
 
-## Import and Analyze
+## Analyze
 
-Convert native records into the stable event schema:
+The normal workflow is one command:
+
+```bash
+overlap-monitor analyze \
+  --input cupti_rank0.jsonl \
+  --rank 0 \
+  --stage-id 0 \
+  --events-output events_rank0.jsonl \
+  --output-json summary_rank0.json \
+  --trace-json timeline_rank0.json \
+  --table
+```
+
+The CLI auto-detects CUPTI records, converts nanoseconds to microseconds,
+validates the trace, and runs the critical-path analyzer. `--events-output` is
+optional and is useful for reproducibility.
+
+For the legacy two-step workflow:
 
 ```bash
 overlap-monitor import-cupti \
@@ -120,82 +116,63 @@ overlap-monitor import-cupti \
   --output events_rank0.jsonl \
   --rank 0 \
   --stage-id 0
+
+overlap-monitor analyze --input events_rank0.jsonl --table
 ```
 
-Analyze observed kernel overlap:
+Incomplete traces are rejected by default. `--allow-incomplete` is for parser
+debugging only and invalidates accuracy claims.
 
-```bash
-overlap-monitor analyze \
-  --input events_rank0.jsonl \
-  --mode timeline \
-  --output-json summary_rank0.json
+## Metrics
+
+Normalized CUPTI timestamps use microseconds (`us`):
+
+```text
+communication_runtime = duration(union(NCCL kernels))
+compute_time           = duration(union(compute kernels))
+hidden_communication   = duration(intersection(NCCL, compute))
+exposed_communication  = communication_runtime - hidden_communication
+overlap_ratio          = hidden_communication / communication_runtime
 ```
 
-The importer rejects traces containing dropped records or unavailable kernel
-timestamps. `--allow-incomplete` is available for debugging, but results from
-an incomplete trace must not be used for accuracy claims.
+These metrics measure observed kernel concurrency. They do not prove that every
+uncovered NCCL interval delays the end-to-end iteration; that attribution also
+requires stage, microbatch, phase, and dependency context.
 
-## Raw JSONL Schema
+## Raw Record Schema
 
 Kernel record:
 
 ```json
-{
-  "schema_version": 1,
-  "record_kind": "kernel",
-  "start_ns": 1000,
-  "end_ns": 5000,
-  "name": "ncclDevKernel_AllToAll",
-  "device_id": 0,
-  "stream_id": 11,
-  "correlation_id": 101,
-  "process_id": 1234,
-  "rank": 0
-}
+{"schema_version":1,"record_kind":"kernel","start_ns":1000,"end_ns":5000,"name":"ncclDevKernel_AllToAll","device_id":0,"stream_id":11,"correlation_id":101,"process_id":1234,"rank":0}
 ```
 
 External correlation record:
 
 ```json
-{
-  "schema_version": 1,
-  "record_kind": "external_correlation",
-  "correlation_id": 101,
-  "external_id": 1001,
-  "external_kind": "custom0"
-}
+{"schema_version":1,"record_kind":"external_correlation","correlation_id":101,"external_id":1001,"external_kind":"custom0"}
 ```
 
-Collector summary:
+The collector ends the file with a summary containing CUPTI and client dropped
+record counts. The parser requires zero dropped records for a complete trace.
 
-```json
-{
-  "schema_version": 1,
-  "record_kind": "collector_summary",
-  "dropped_records": 0,
-  "cupti_dropped_records": 0,
-  "client_dropped_records": 0
-}
-```
+## Validation Checklist
 
-## Validation Protocol
+Compare the same bounded workload in four modes:
 
-Local tests prove schema validation, timestamp conversion, external
-correlation, dropped-record rejection, and integration with the interval
-analyzers. They do not prove native collector compatibility or GPU accuracy.
-
-GPU validation should use the same bounded workload in four modes:
-
-1. monitor off;
-2. Work-only recorder;
-3. native CUPTI collector;
+1. Monitor off.
+2. Work/wait adapter only.
+3. Native CUPTI collector.
 4. Nsight Systems reference trace.
 
-Record at least iteration p50/p95, tokens/s, kernel count, dropped records,
-NCCL duration, compute duration, and overlap duration. Suggested acceptance
-gates are less than 5% interval/overlap error against Nsight and less than 2%
-throughput loss for the CUPTI-on run. These are project targets, not currently
-validated claims.
+Record iteration p50/p95, throughput, kernel count, dropped records, NCCL time,
+compute time, and overlap time. Current project targets are less than 5% metric
+error against Nsight and less than 2% throughput loss. These are acceptance
+targets, not validated production claims.
+
+Current GPU evidence is documented in
+[validation.md](validation.md). CUDA 12.9,
+Transformer Engine 2.7, real Megatron 1F1B, and Nsight comparison remain open.
 
 ## References
 

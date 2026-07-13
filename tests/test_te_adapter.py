@@ -18,6 +18,11 @@ class TEAdapterTests(unittest.TestCase):
         self.assertEqual(info.event_type, EventType.ATTENTION)
         self.assertEqual(info.precision, "bf16")
 
+    def test_does_not_treat_word_suffix_as_te_marker(self):
+        info = TEAdapter().classify_kernel("update_tensor_kernel")
+        self.assertEqual(info.event_type, EventType.UNKNOWN)
+        self.assertFalse(info.is_transformer_engine)
+
 
 if __name__ == "__main__":
     unittest.main()

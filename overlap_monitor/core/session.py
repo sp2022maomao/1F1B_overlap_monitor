@@ -33,7 +33,12 @@ class MonitoringSession:
             return True
 
     def extend(self, events: Iterable[Event]) -> int:
-        return sum(1 for event in events if self.emit(event))
+        batch = list(events)
+        with self._lock:
+            accepted = min(self.max_events - len(self._events), len(batch))
+            self._events.extend(batch[:accepted])
+            self._dropped_events += len(batch) - accepted
+        return accepted
 
     def snapshot(self) -> list[Event]:
         with self._lock:

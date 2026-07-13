@@ -27,7 +27,12 @@ class OverlapSummary:
     stage_balance: float
     stage_metrics: list[StageMetrics] = field(default_factory=list)
 
+    @property
+    def overlap_ratio_definition(self) -> str:
+        return "overlap_time / min(compute_time, communication_time)"
+
     def to_dict(self) -> dict:
         payload = asdict(self)
+        payload["overlap_ratio_definition"] = self.overlap_ratio_definition
         payload["stage_metrics"] = [stage.to_dict() for stage in self.stage_metrics]
         return payload

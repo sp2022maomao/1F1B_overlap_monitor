@@ -2,15 +2,14 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
-from overlap_monitor.analyzer.overlap import COMPUTE_TYPES, COMMUNICATION_TYPES
+from overlap_monitor.analyzer.overlap import COMMUNICATION_TYPES, COMPUTE_TYPES
 from overlap_monitor.core.events import Event, EventType
 from overlap_monitor.core.intervals import (
-    interval_total,
     intersection_total,
+    interval_total,
     merge_intervals,
     span,
 )
-
 
 WAIT_FAMILY = "WAIT"
 
@@ -46,8 +45,13 @@ class CriticalPathSummary:
     warnings: list[str] = field(default_factory=list)
     group_metrics: list[CriticalPathGroupMetrics] = field(default_factory=list)
 
+    @property
+    def overlap_ratio_definition(self) -> str:
+        return "hidden_communication / communication_runtime"
+
     def to_dict(self) -> dict:
         payload = asdict(self)
+        payload["overlap_ratio_definition"] = self.overlap_ratio_definition
         payload["group_metrics"] = [metric.to_dict() for metric in self.group_metrics]
         return payload
 
@@ -62,7 +66,7 @@ class CriticalPathOverlapAnalyzer:
     """
 
     def analyze(self, events: list[Event]) -> CriticalPathSummary:
-        return self._analyze_group(events, group_id="all", include_subgroups=True)
+        return self._analyze_group(events, include_subgroups=True)
 
     def compute_events(self, events: list[Event]) -> list[Event]:
         return [
@@ -109,7 +113,7 @@ class CriticalPathOverlapAnalyzer:
         ]
 
     def _analyze_group(
-        self, events: list[Event], group_id: str, include_subgroups: bool
+        self, events: list[Event], include_subgroups: bool
     ) -> CriticalPathSummary:
         compute_intervals = merge_intervals(
             event.interval for event in self.compute_events(events)
@@ -210,9 +214,7 @@ class CriticalPathOverlapAnalyzer:
 
         metrics = []
         for group_id, group_events in sorted(by_group.items()):
-            summary = self._analyze_group(
-                group_events, group_id, include_subgroups=False
-            )
+            summary = self._analyze_group(group_events, include_subgroups=False)
             metrics.append(
                 CriticalPathGroupMetrics(
                     group_id=group_id,

@@ -3,15 +3,19 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from overlap_monitor.analyzer.classifier import KernelClassifier
 from overlap_monitor.core.events import Event, EventType
 
 
 class PyTorchProfilerEventParser:
-    """Adapter from PyTorch profiler events to v2 Event objects.
+    """Adapter from PyTorch profiler events to normalized Event objects.
 
     This module does not import torch. It only consumes objects with profiler-like
     attributes, so synthetic tests can exercise it without CUDA.
     """
+
+    def __init__(self, classifier: KernelClassifier | None = None):
+        self.classifier = classifier or KernelClassifier()
 
     def event_name(self, event: Any) -> str:
         return str(getattr(event, "name", "") or "")
@@ -47,14 +51,20 @@ class PyTorchProfilerEventParser:
             if interval is None:
                 continue
             parsed.append(
-                Event(
-                    timestamp_start=interval[0],
-                    timestamp_end=interval[1],
-                    event_type=EventType.UNKNOWN,
-                    name=self.event_name(event),
-                    device_id=self.device_id(event),
-                    rank=rank,
-                    stage_id=stage_id,
+                self.classifier.classify_event(
+                    Event(
+                        timestamp_start=interval[0],
+                        timestamp_end=interval[1],
+                        event_type=EventType.UNKNOWN,
+                        name=self.event_name(event),
+                        device_id=self.device_id(event),
+                        rank=rank,
+                        stage_id=stage_id,
+                        metadata={
+                            "collector": "pytorch_profiler",
+                            "timestamp_unit": "us",
+                        },
+                    )
                 )
             )
         return parsed

@@ -3,15 +3,21 @@ from __future__ import annotations
 from typing import Any
 
 
-def render_summary_table(summary: Any) -> str:
+def render_summary_table(summary: Any, *, timestamp_unit: str | None = None) -> str:
     rows = _summary_rows(summary)
     width = max(len(name) for name, _ in rows)
     lines = ["metric | value", "--- | ---:"]
+    if timestamp_unit:
+        lines.append(f"timestamp_unit | {timestamp_unit}")
     for name, value in rows:
         lines.append(f"{name:<{width}} | {value:.6g}")
+    if hasattr(summary, "overlap_ratio_definition"):
+        lines.append(f"overlap_ratio_definition | {summary.overlap_ratio_definition}")
     if hasattr(summary, "measurement_quality"):
         lines.append(f"measurement_quality | {summary.measurement_quality}")
-        lines.append(f"runtime_kind | {summary.communication_runtime_kind}")
+        lines.append(
+            f"communication_runtime_kind | {summary.communication_runtime_kind}"
+        )
         for warning in summary.warnings:
             lines.append(f"warning | {warning}")
 

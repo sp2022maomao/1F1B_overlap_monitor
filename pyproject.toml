@@ -39,6 +39,10 @@ gpu = [
   "torch",
   "transformer-engine==2.7.0"
 ]
+dev = [
+  "build>=1.2",
+  "ruff>=0.12,<1"
+]
 
 [project.scripts]
 overlap-monitor = "overlap_monitor.cli:main"
@@ -49,9 +53,19 @@ Repository = "https://github.com/sp2022maomao/1F1B_overlap_monitor"
 Issues = "https://github.com/sp2022maomao/1F1B_overlap_monitor/issues"
 Documentation = "https://github.com/sp2022maomao/1F1B_overlap_monitor/tree/main/docs"
 
+[tool.setuptools]
+include-package-data = false
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["overlap_monitor*"]
 
 [tool.setuptools.package-data]
-overlap_monitor = ["py.typed", "configs/*.json", "examples/*.jsonl"]
+overlap_monitor = ["py.typed"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

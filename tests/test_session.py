@@ -11,6 +11,14 @@ from overlap_monitor.core.session import MonitoringSession
 
 
 class MonitoringSessionTests(unittest.TestCase):
+    def test_batch_extend_honors_capacity(self):
+        session = MonitoringSession(max_events=2)
+        events = [Event(index, index + 1, EventType.COMPUTE) for index in range(3)]
+
+        self.assertEqual(session.extend(events), 2)
+        self.assertEqual(len(session.snapshot()), 2)
+        self.assertEqual(session.dropped_events, 1)
+
     def test_bounded_buffer_and_flush(self):
         session = MonitoringSession(max_events=2)
         self.assertTrue(session.emit(Event(0, 1, EventType.GEMM)))
