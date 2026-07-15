@@ -7,6 +7,7 @@ then use the shortest path below for the task at hand.
 
 | Document | Purpose |
 | --- | --- |
+| [Python API and CLI](api.md) | Use stable high-level entry points and versioned outputs |
 | [Integration](integration.md) | Add Event, Work/wait, Megatron, or PyTorch Profiler inputs |
 | [CUPTI measurement](cupti_measurement.md) | Build the native collector and analyze a bounded GPU trace |
 | [Measurement semantics](measurement.md) | Interpret timeline, hidden, exposed, and proxy metrics correctly |

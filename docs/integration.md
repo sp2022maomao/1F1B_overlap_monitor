@@ -4,36 +4,36 @@ Choose the least invasive data source that answers the experiment question.
 The normal workflow is to collect a bounded trace, analyze it offline, and use
 Nsight Systems only for cross-validation.
 
-## 1. Analyze Normalized Events
+## 1. Use The High-Level API
 
-Create Event objects or Event JSONL in microseconds:
+Applications should normally use `analyze_trace()`:
 
 ```python
-from overlap_monitor import CriticalPathOverlapAnalyzer, Event, EventType
+from overlap_monitor import analyze_trace
+
+result = analyze_trace(
+    "trace.jsonl",
+    mode="critical-path",
+    rank=0,
+    stage_id=0,
+)
+print(result.communication_hidden_ratio)
+```
+
+For custom in-memory pipelines, use `analyze_events()`:
+
+```python
+from overlap_monitor import Event, EventType, analyze_events
 
 events = [
     Event(0, 10, EventType.GEMM, rank=0, stage_id=0),
     Event(5, 15, EventType.NCCL, rank=0, stage_id=0),
 ]
-
-summary = CriticalPathOverlapAnalyzer().analyze(events)
-print(summary.to_dict())
+result = analyze_events(events, mode="timeline")
+print(result.timeline_overlap_ratio)
 ```
 
-For files, validate before analysis:
-
-```python
-from overlap_monitor import CriticalPathOverlapAnalyzer, validate_events
-from overlap_monitor.core.io import read_events_jsonl
-
-events = read_events_jsonl("events_rank0.jsonl")
-report = validate_events(events)
-if not report.valid:
-    raise ValueError(report.to_dict())
-summary = CriticalPathOverlapAnalyzer().analyze(events)
-```
-
-The CLI performs the same validation automatically:
+The CLI calls the same public API:
 
 ```bash
 overlap-monitor analyze --input events_rank0.jsonl --table
@@ -82,7 +82,7 @@ is available.
 `MegatronWorkAdapter` keeps Megatron-specific metadata out of the recorder:
 
 ```python
-from overlap_monitor import MegatronWorkAdapter, WorkHandleRecorder
+from overlap_monitor import EventType, MegatronWorkAdapter, WorkHandleRecorder
 
 recorder = WorkHandleRecorder()
 adapter = MegatronWorkAdapter(
@@ -99,10 +99,34 @@ work = adapter.wrap_a2a(
     microbatch_id=microbatch_id,
     phase="dispatch",
 )
+
+send_work = adapter.wrap_pipeline(
+    raw_send_work,
+    comm_id=f"iter{iteration}-mb{microbatch_id}-forward-send",
+    iteration=iteration,
+    microbatch_id=microbatch_id,
+    direction="send",
+    phase="forward",
+    peer_rank=next_pipeline_rank,
+)
+
+forward_region = adapter.region(
+    forward_start_us,
+    forward_end_us,
+    iteration=iteration,
+    microbatch_id=microbatch_id,
+    phase="forward",
+    event_type=EventType.PIPELINE,
+)
 ```
 
 Add this only where the original code already returns an async Work handle.
 Do not alter routing, collective selection, or schedule order in a baseline run.
+`wrap_pipeline()` supports forward/backward send/recv Work handles, while
+`region()` creates semantic iteration, forward, backward, expert, or drain
+regions without changing execution. Region timestamps must use the same clock
+domain as events analyzed with them. Pass `event_type=EventType.COMPUTE` only
+when the interval represents measured compute rather than a semantic boundary.
 
 ## 4. Parse PyTorch Profiler Events
 
@@ -148,6 +172,8 @@ overlap-monitor analyze \
 Use `--mode timeline` for the symmetric interval metric. The default
 `critical-path` mode reports communication hiding. Read
 [Measurement semantics](measurement.md) before comparing the two ratios.
+Use `--assume-aligned-clocks` only after externally aligning multiple rank or
+device clocks; the assumption is persisted in summary JSON.
 
 ## Production Checklist
 

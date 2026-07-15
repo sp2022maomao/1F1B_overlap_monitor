@@ -41,6 +41,7 @@ gpu = [
 ]
 dev = [
   "build>=1.2",
+  "jsonschema>=4.23,<5",
   "ruff>=0.12,<1"
 ]
 
@@ -61,7 +62,7 @@ where = ["."]
 include = ["overlap_monitor*"]
 
 [tool.setuptools.package-data]
-overlap_monitor = ["py.typed"]
+overlap_monitor = ["py.typed", "schemas/*.json"]
 
 [tool.ruff]
 target-version = "py310"

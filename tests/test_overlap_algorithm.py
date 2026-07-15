@@ -17,6 +17,7 @@ class OverlapAlgorithmTests(unittest.TestCase):
         self.assertEqual(summary.communication_time, 10)
         self.assertEqual(summary.overlap_time, 5)
         self.assertEqual(summary.overlap_ratio, 0.5)
+        self.assertEqual(summary.timeline_overlap_ratio, 0.5)
         self.assertEqual(
             summary.to_dict()["overlap_ratio_definition"],
             "overlap_time / min(compute_time, communication_time)",
@@ -31,6 +32,10 @@ class OverlapAlgorithmTests(unittest.TestCase):
         summary = OverlapAnalyzer().analyze(events)
         self.assertAlmostEqual(summary.bubble_ratio, 10 / 70)
         self.assertAlmostEqual(summary.stage_metrics[0].bubble_ratio, 10 / 30)
+        self.assertEqual(
+            summary.stage_metrics[0].to_dict()["timeline_overlap_ratio"],
+            summary.stage_metrics[0].overlap_ratio,
+        )
         self.assertAlmostEqual(summary.stage_balance, 0.75)
 
 

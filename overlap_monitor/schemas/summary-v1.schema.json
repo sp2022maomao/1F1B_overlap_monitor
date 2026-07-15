@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sp2022maomao/1F1B_overlap_monitor/blob/main/overlap_monitor/schemas/summary-v1.schema.json",
+  "title": "overlap-monitor analysis summary v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "analysis_mode",
+    "input_format",
+    "timestamp_unit",
+    "clock_alignment_assumed",
+    "source_warnings",
+    "validation",
+    "overlap_ratio",
+    "overlap_ratio_definition"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "analysis_mode": {"enum": ["critical-path", "timeline"]},
+    "input_format": {"enum": ["events", "cupti"]},
+    "timestamp_unit": {"const": "us"},
+    "clock_alignment_assumed": {"type": "boolean"},
+    "source_warnings": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "validation": {
+      "type": "object",
+      "required": ["valid", "event_count", "clock_domains", "issues"],
+      "properties": {
+        "valid": {"type": "boolean"},
+        "event_count": {"type": "integer", "minimum": 0},
+        "clock_domains": {"type": "array", "items": {"type": "string"}},
+        "issues": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "overlap_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+    "overlap_ratio_definition": {"type": "string"},
+    "timeline_overlap_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+    "communication_hidden_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"analysis_mode": {"const": "timeline"}}},
+      "then": {
+        "required": [
+          "timeline_overlap_ratio",
+          "compute_time",
+          "communication_time",
+          "overlap_time"
+        ]
+      }
+    },
+    {
+      "if": {"properties": {"analysis_mode": {"const": "critical-path"}}},
+      "then": {
+        "required": [
+          "communication_hidden_ratio",
+          "communication_runtime",
+          "hidden_communication",
+          "exposed_communication",
+          "measurement_quality",
+          "communication_runtime_kind"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": true
+}

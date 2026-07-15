@@ -24,3 +24,9 @@ overlap-monitor analyze \
 
 The fixtures demonstrate file formats and known metric values. They are not
 performance benchmarks.
+
+Run the equivalent high-level Python API example after installing the package:
+
+```bash
+python3 examples/python_api.py
+```

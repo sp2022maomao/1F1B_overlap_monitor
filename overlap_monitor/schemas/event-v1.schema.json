@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sp2022maomao/1F1B_overlap_monitor/blob/main/overlap_monitor/schemas/event-v1.schema.json",
+  "title": "overlap-monitor normalized event v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "timestamp_start",
+    "timestamp_end",
+    "event_type",
+    "name",
+    "device_id",
+    "rank",
+    "stage_id",
+    "metadata"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "timestamp_start": {"type": "number"},
+    "timestamp_end": {"type": "number"},
+    "event_type": {
+      "enum": [
+        "COMPUTE",
+        "COMMUNICATION",
+        "NCCL",
+        "GEMM",
+        "ATTENTION",
+        "MEMORY",
+        "WAIT",
+        "PIPELINE",
+        "UNKNOWN"
+      ]
+    },
+    "name": {"type": "string"},
+    "device_id": {"type": ["integer", "null"]},
+    "rank": {"type": ["integer", "null"]},
+    "stage_id": {"type": ["integer", "null"]},
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "iteration": {"type": "integer", "minimum": 0},
+        "microbatch_id": {"type": "integer", "minimum": 0},
+        "phase": {
+          "enum": [
+            "iteration",
+            "forward",
+            "backward",
+            "dispatch",
+            "expert",
+            "combine",
+            "send",
+            "recv",
+            "drain"
+          ]
+        },
+        "comm_id": {"type": "string"},
+        "measurement": {
+          "enum": [
+            "kernel_timeline",
+            "nsight_timeline",
+            "async_work_lifetime",
+            "critical_path_wait"
+          ]
+        },
+        "runtime_kind": {
+          "enum": [
+            "observed_kernel_runtime",
+            "observed_work_window",
+            "host_wait_proxy",
+            "unbounded",
+            "generic_event_runtime",
+            "upper_bound"
+          ]
+        },
+        "clock_domain": {"type": "string"},
+        "timestamp_unit": {"const": "us"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

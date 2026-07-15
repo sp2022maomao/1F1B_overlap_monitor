@@ -35,6 +35,10 @@ Nsight Systems / PyTorch profiler traces
   kernel timeline is available.
 - Add or update tests for every behavior change.
 - Update docs when changing public API, metrics, or measurement semantics.
+- Keep Event and summary output compatible with the JSON schemas under
+  `overlap_monitor/schemas/`; version incompatible changes explicitly.
+- Prefer `analyze_trace()` for application integrations so Python and CLI
+  behavior stay aligned.
 
 ## Validation Expectations
 

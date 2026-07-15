@@ -6,11 +6,12 @@ import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 
-from overlap_monitor.core.events import Event, event_from_mapping
+from overlap_monitor.core.events import EVENT_SCHEMA_VERSION, Event, event_from_mapping
 
 
 def event_to_dict(event: Event) -> dict:
     return {
+        "schema_version": EVENT_SCHEMA_VERSION,
         "timestamp_start": event.timestamp_start,
         "timestamp_end": event.timestamp_end,
         "device_id": event.device_id,

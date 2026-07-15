@@ -25,6 +25,7 @@ overlap_monitor/         installable Python package
   analyzer/              timeline and critical-path algorithms
   core/                  event schema, intervals, I/O, validation
   profiler/              CUPTI, PyTorch profiler, and Work parsers
+  schemas/               versioned Event and summary JSON contracts
   te_adapter/            Transformer Engine kernel classification
   visualization/         text and Chrome trace output
 native/cupti_collector/  optional C++ CUPTI Activity collector
@@ -71,12 +72,14 @@ same class from being double counted.
 
 The current public contracts are:
 
+- `load_trace()`, `analyze_trace()`, `analyze_events()`, and `AnalysisResult`;
 - `Event` and `EventType`;
-- normalized Event JSONL in microseconds;
+- versioned Event and summary JSON schemas in microseconds;
 - analyzer summary dataclasses and `to_dict()` output;
 - `overlap-monitor analyze`, `validate`, and `import-cupti`;
 - explicit `measurement_quality`, `communication_runtime_kind`, and
-  `overlap_ratio_definition` fields.
+  `overlap_ratio_definition` fields;
+- explicit `timeline_overlap_ratio` and `communication_hidden_ratio` fields.
 
 The project is still alpha. Schema changes must remain backward compatible or
 be accompanied by a versioned migration before 1.0.

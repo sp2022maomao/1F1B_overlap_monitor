@@ -68,6 +68,19 @@ overlap-monitor analyze \
   --ascii
 ```
 
+The Python API uses the same loader and validation path:
+
+```python
+from overlap_monitor import analyze_trace
+
+result = analyze_trace(
+    "examples/traces/cupti_activity.jsonl",
+    rank=0,
+    stage_id=0,
+)
+print(result.communication_hidden_ratio)
+```
+
 ## Analyze Your Trace
 
 ### Native CUPTI JSONL
@@ -122,8 +135,9 @@ the strongest framework semantics.
 | `communication_runtime` | Union of selected NCCL/kernel communication intervals |
 | `hidden_communication` | Communication concurrent with classified compute |
 | `exposed_communication` | Communication not hidden by classified compute |
-| `overlap_ratio` in critical-path mode | `hidden_communication / communication_runtime` |
-| `overlap_ratio` in timeline mode | `overlap_time / min(compute_time, communication_time)` |
+| `communication_hidden_ratio` | `hidden_communication / communication_runtime` |
+| `timeline_overlap_ratio` | `overlap_time / min(compute_time, communication_time)` |
+| `overlap_ratio` | Compatibility alias for the active mode-specific ratio |
 | `wait_time` | Host-side Work wait proxy |
 | `critical_path_span` | Span covered by the analyzed compute, communication, and wait events |
 
@@ -164,6 +178,7 @@ Nsight, CUDA, or CUPTI. Runtime integrations remain thin adapters.
 Start with the [documentation index](docs/README.md).
 
 - [Architecture](docs/architecture.md)
+- [Python API and CLI](docs/api.md)
 - [Integration guide](docs/integration.md)
 - [Measurement semantics](docs/measurement.md)
 - [CUPTI collection and analysis](docs/cupti_measurement.md)

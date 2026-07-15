@@ -57,6 +57,19 @@ overlap-monitor analyze \
   --ascii
 ```
 
+Python API 与 CLI 共用同一套加载和校验逻辑：
+
+```python
+from overlap_monitor import analyze_trace
+
+result = analyze_trace(
+    "examples/traces/cupti_activity.jsonl",
+    rank=0,
+    stage_id=0,
+)
+print(result.communication_hidden_ratio)
+```
+
 ## 分析真实 Trace
 
 常用的 CUPTI 主流程只需一条命令：
@@ -102,8 +115,9 @@ CUPTI 数据最底层，Nsight Systems 是系统级综合时间轴，PyTorch Pro
 | `communication_runtime` | NCCL/通信 kernel 区间并集 |
 | `hidden_communication` | 与已识别计算并发的通信 |
 | `exposed_communication` | 没有被计算覆盖的通信 |
-| critical-path 模式的 `overlap_ratio` | `hidden_communication / communication_runtime` |
-| timeline 模式的 `overlap_ratio` | `overlap_time / min(compute_time, communication_time)` |
+| `communication_hidden_ratio` | `hidden_communication / communication_runtime` |
+| `timeline_overlap_ratio` | `overlap_time / min(compute_time, communication_time)` |
+| `overlap_ratio` | 当前模式明确比例字段的兼容别名 |
 | `wait_time` | Work 在主机侧的等待 proxy |
 | `critical_path_span` | 本次分析覆盖的活动时间范围 |
 

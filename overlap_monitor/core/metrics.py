@@ -13,8 +13,12 @@ class StageMetrics:
     bubble_ratio: float
     active_span: float
 
+    @property
+    def timeline_overlap_ratio(self) -> float:
+        return self.overlap_ratio
+
     def to_dict(self) -> dict:
-        return asdict(self)
+        return {**asdict(self), "timeline_overlap_ratio": self.timeline_overlap_ratio}
 
 
 @dataclass(frozen=True)
@@ -31,8 +35,13 @@ class OverlapSummary:
     def overlap_ratio_definition(self) -> str:
         return "overlap_time / min(compute_time, communication_time)"
 
+    @property
+    def timeline_overlap_ratio(self) -> float:
+        return self.overlap_ratio
+
     def to_dict(self) -> dict:
         payload = asdict(self)
+        payload["timeline_overlap_ratio"] = self.timeline_overlap_ratio
         payload["overlap_ratio_definition"] = self.overlap_ratio_definition
         payload["stage_metrics"] = [stage.to_dict() for stage in self.stage_metrics]
         return payload

@@ -46,6 +46,7 @@ class CriticalPathAnalyzerTests(unittest.TestCase):
         self.assertEqual(summary.exposed_communication, 5)
         self.assertEqual(summary.hidden_communication, 35)
         self.assertAlmostEqual(summary.overlap_ratio, 35 / 40)
+        self.assertAlmostEqual(summary.communication_hidden_ratio, 35 / 40)
         self.assertEqual(summary.measurement_quality, "estimated")
 
     def test_falls_back_to_compute_intersection_without_wait_events(self):

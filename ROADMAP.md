@@ -8,6 +8,8 @@
 - Native CUPTI collector, strict JSONL parser, and direct CLI analysis path.
 - Bounded two-GPU RTX 4090 NCCL/GEMM smoke validation.
 - Python 3.10-3.12 CI, Ruff checks, and wheel/sdist build checks.
+- Stable high-level Python API shared with the CLI, versioned schemas, and
+  explicit mode-specific overlap ratios.
 
 ## 0.4.0: Target-Stack Validation
 
@@ -22,7 +24,8 @@
 - Improve PyTorch Profiler trace import.
 - Add optional Nsight SQLite ingestion if dependencies remain isolated.
 - Add richer Chrome trace categories and rank-group summaries.
-- Stabilize stage, microbatch, iteration, and phase correlation metadata.
+- Add schema migrations when stage, microbatch, iteration, or phase metadata
+  evolves.
 
 ## 1.0.0: Stable API
 

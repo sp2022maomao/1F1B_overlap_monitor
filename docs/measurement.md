@@ -27,7 +27,9 @@ be the union of compute intervals and `N` the union of communication intervals:
 compute_time       = duration(C)
 communication_time = duration(N)
 overlap_time       = duration(intersection(C, N))
-overlap_ratio      = overlap_time / min(compute_time, communication_time)
+timeline_overlap_ratio
+                   = overlap_time / min(compute_time, communication_time)
+overlap_ratio      = timeline_overlap_ratio  # compatibility alias
 ```
 
 This symmetric ratio answers how much of the smaller activity class overlaps
@@ -50,11 +52,15 @@ Critical-path mode reports the fraction of communication hidden under the
 available evidence:
 
 ```text
-overlap_ratio = hidden_communication / communication_runtime
+communication_hidden_ratio
+              = hidden_communication / communication_runtime
+overlap_ratio = communication_hidden_ratio  # compatibility alias
 ```
 
-The denominator intentionally differs from timeline mode. Every JSON summary
-includes `overlap_ratio_definition` to make this explicit.
+The denominator intentionally differs from timeline mode. New integrations
+should consume the explicit mode-specific field. Every JSON summary includes
+`overlap_ratio_definition`, while `overlap_ratio` remains compatible with
+earlier releases.
 
 ### NCCL kernel timeline available
 

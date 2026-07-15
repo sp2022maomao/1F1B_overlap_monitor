@@ -132,7 +132,9 @@ communication_runtime = duration(union(NCCL kernels))
 compute_time           = duration(union(compute kernels))
 hidden_communication   = duration(intersection(NCCL, compute))
 exposed_communication  = communication_runtime - hidden_communication
-overlap_ratio          = hidden_communication / communication_runtime
+communication_hidden_ratio
+                       = hidden_communication / communication_runtime
+overlap_ratio          = communication_hidden_ratio  # compatibility alias
 ```
 
 These metrics measure observed kernel concurrency. They do not prove that every

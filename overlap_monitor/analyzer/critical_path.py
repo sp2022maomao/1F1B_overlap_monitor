@@ -27,8 +27,15 @@ class CriticalPathGroupMetrics:
     measurement_quality: str
     communication_runtime_kind: str
 
+    @property
+    def communication_hidden_ratio(self) -> float:
+        return self.overlap_ratio
+
     def to_dict(self) -> dict:
-        return asdict(self)
+        return {
+            **asdict(self),
+            "communication_hidden_ratio": self.communication_hidden_ratio,
+        }
 
 
 @dataclass(frozen=True)
@@ -49,8 +56,13 @@ class CriticalPathSummary:
     def overlap_ratio_definition(self) -> str:
         return "hidden_communication / communication_runtime"
 
+    @property
+    def communication_hidden_ratio(self) -> float:
+        return self.overlap_ratio
+
     def to_dict(self) -> dict:
         payload = asdict(self)
+        payload["communication_hidden_ratio"] = self.communication_hidden_ratio
         payload["overlap_ratio_definition"] = self.overlap_ratio_definition
         payload["group_metrics"] = [metric.to_dict() for metric in self.group_metrics]
         return payload

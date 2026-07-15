@@ -17,6 +17,10 @@ The hardware-independent suite covers:
 - PyTorch profiler and TE kernel classification;
 - Megatron metadata attachment;
 - CLI auto-detection and output generation;
+- high-level Python API and CLI behavior parity;
+- Event and summary JSON Schema conformance;
+- explicit clock-alignment assumptions and legacy CLI compatibility;
+- A2A, pipeline send/receive, and semantic Megatron region metadata;
 - ASCII, Markdown, and Chrome trace output;
 - bounded and concurrent event buffering.
 

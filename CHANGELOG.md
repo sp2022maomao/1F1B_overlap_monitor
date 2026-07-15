@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Add stable `load_trace()`, `analyze_trace()`, and `analyze_events()` entry
+  points with a shared `AnalysisResult` used by the CLI.
+- Add versioned Event and summary JSON schemas, explicit
+  `timeline_overlap_ratio` and `communication_hidden_ratio` fields, and an
+  explicit clock-alignment assumption in serialized output.
+- Replace `--allow-mixed-clock-domains` with the clearer
+  `--assume-aligned-clocks` spelling while retaining the old flag as a hidden
+  compatibility alias.
+- Extend the Megatron adapter with pipeline send/receive Work metadata and
+  semantic iteration/forward/backward regions.
 - Move tests, examples, and benchmarks out of the installable package and
   consolidate project documentation around architecture, integration,
   measurement semantics, and validation.

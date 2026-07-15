@@ -5,6 +5,8 @@ from enum import Enum
 from math import isfinite
 from typing import Any
 
+EVENT_SCHEMA_VERSION = 1
+
 
 class EventType(str, Enum):
     COMPUTE = "COMPUTE"
@@ -60,6 +62,12 @@ class Event:
 
 
 def event_from_mapping(payload: dict[str, Any]) -> Event:
+    schema_version = int(payload.get("schema_version", EVENT_SCHEMA_VERSION))
+    if schema_version != EVENT_SCHEMA_VERSION:
+        raise ValueError(
+            f"unsupported event schema_version={schema_version}; "
+            f"expected {EVENT_SCHEMA_VERSION}"
+        )
     return Event(
         timestamp_start=float(payload["timestamp_start"]),
         timestamp_end=float(payload["timestamp_end"]),
