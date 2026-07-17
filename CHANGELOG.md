@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Streamline the English and Chinese quick starts, API/CLI reference,
+  integration guide, and documentation index around task-oriented workflows.
 - Add stable `load_trace()`, `analyze_trace()`, and `analyze_events()` entry
   points with a shared `AnalysisResult` used by the CLI.
 - Add versioned Event and summary JSON schemas, explicit

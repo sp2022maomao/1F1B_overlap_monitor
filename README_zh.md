@@ -5,25 +5,17 @@
 
 [English](README.md) | [中文](README_zh.md)
 
-`overlap-monitor` 用于分析 Megatron/MoE 和 1F1B 异步训练中的通信-计算重叠。它可以直接读取统一 Event JSONL 或项目内置 CUPTI collector 生成的原始记录，输出 NCCL 运行时间、隐藏/暴露通信、overlap ratio 和 stage 级指标。
+`overlap-monitor` 用于分析 Megatron/MoE 和 1F1B 异步训练中的通信-计算重叠。
+它可读取统一 Event JSONL 或原始 CUPTI activity 记录，并输出 NCCL 运行时间、
+隐藏/暴露通信、overlap ratio 和 pipeline stage 指标。
 
-> **当前状态：**开源 Alpha（`0.3.0`）。离线分析链路和双 RTX 4090 CUPTI 小规模测试已验证；CUDA 12.9、Transformer Engine 2.7、真实 Megatron 1F1B 以及 Nsight 精度对照仍待完成。
-
-## 要解决的问题
-
-MoE AllToAll 等通信通常异步发起。Python 函数或 `Work.wait()` 返回时，NCCL kernel 不一定已经在 GPU 上完成。因此，Python timer、单 stream CUDA event、Work/wait 和 GPU kernel timeline 测到的不是同一件事。
-
-本项目将三个量分开：
-
-```text
-通信实际运行时间
-被计算隐藏的通信
-未被隐藏的暴露通信
-```
-
-分析器优先使用 GPU kernel timeline。没有 timeline 时，`Work.wait()` 只作为 host-side proxy，不会被标记成精确 NCCL 时间。
+> **状态：**开源 Alpha（`0.3.0`）。离线分析链路和双 RTX 4090 CUPTI
+> 小规模测试已验证；CUDA 12.9、Transformer Engine 2.7、真实 Megatron 1F1B
+> 和 Nsight 精度对照仍待完成。
 
 ## 安装
+
+需要 Python 3.10 或更高版本。
 
 ```bash
 git clone https://github.com/sp2022maomao/1F1B_overlap_monitor.git
@@ -31,11 +23,13 @@ cd 1F1B_overlap_monitor
 python3 -m pip install .
 ```
 
-离线分析器没有强制的第三方依赖。Native CUPTI 采集需要 Linux、CMake 和带 CUPTI 的 CUDA Toolkit。
+离线分析器没有强制第三方依赖。Native CUPTI 采集还需要 Linux、CMake 和包含
+CUPTI 的 CUDA Toolkit。
 
 ## 30 秒上手
 
-直接分析仓库自带的 CUPTI 样例：
+直接分析仓库样例。程序会自动识别输入格式，将时间统一为微秒（`us`），并在
+计算前校验 trace。
 
 ```bash
 overlap-monitor analyze \
@@ -46,18 +40,7 @@ overlap-monitor analyze \
   --output-json summary.json
 ```
 
-`analyze` 会自动识别原始 CUPTI JSONL 和统一 Event JSONL，并在分析前做完整性检查。规范化时间戳和所有 duration 字段的单位都是微秒（`us`）。
-
-分析 Work/wait 样例：
-
-```bash
-overlap-monitor analyze \
-  --input examples/traces/critical_path_events.jsonl \
-  --table \
-  --ascii
-```
-
-Python API 与 CLI 共用同一套加载和校验逻辑：
+Python API 使用同一套加载、校验和分析流程：
 
 ```python
 from overlap_monitor import analyze_trace
@@ -70,93 +53,76 @@ result = analyze_trace(
 print(result.communication_hidden_ratio)
 ```
 
-## 分析真实 Trace
-
-常用的 CUPTI 主流程只需一条命令：
-
-```bash
-overlap-monitor analyze \
-  --input cupti_rank0.jsonl \
-  --rank 0 \
-  --stage-id 0 \
-  --events-output events_rank0.jsonl \
-  --output-json summary_rank0.json \
-  --trace-json timeline_rank0.json \
-  --table
-```
-
-`--events-output` 可选，用于保存实际参与分析的规范化事件。原有 `import-cupti` 两步流程仍然保留兼容。
-
-CUPTI 丢记录或时间戳缺失时默认拒绝分析。`--allow-incomplete` 只适合调试，不能用于正式实验数据。
-
-已有 Event JSONL 时：
+已有统一 Event JSONL 时，调用方式不变：
 
 ```bash
 overlap-monitor validate --input events_rank0.jsonl
-overlap-monitor analyze --input events_rank0.jsonl --table
+overlap-monitor analyze --input events_rank0.jsonl --table --ascii
 ```
 
-`--rank`、`--device-id` 和 `--stage-id` 用于选择同一时钟域中的事件。默认 critical-path 模式输出隐藏/暴露通信；`--mode timeline` 用于对称 timeline overlap 和 pipeline stage 指标。
+过滤条件、输出文件、分析模式、schema 和时钟对齐规则见
+[API 与 CLI 文档](docs/api.md)。
 
-## 三类 Profiling 工具的粒度
+## 选择数据源
 
-| 工具 | 数据粒度 | 主要用途 |
+| 数据源 | 适用场景 | 文档 |
 | --- | --- | --- |
-| CUPTI | 底层 CUDA activity / kernel | 提供 NCCL 和计算 kernel 原始区间 |
-| Nsight Systems | CPU/GPU/stream 系统级时间轴 | 跨 stream 观察和精度对照 |
-| PyTorch Profiler | operator/module/autograd 框架级 | 对应 PyTorch 算子语义和 CUDA 耗时 |
+| CUPTI | 精确 NCCL 和计算 kernel 区间 | [CUPTI 测量](docs/cupti_measurement.md) |
+| PyTorch Profiler | 框架/operator 归因 | [集成指南](docs/integration.md#pytorch-profiler) |
+| Work/wait adapter | 低开销异步依赖 proxy | [集成指南](docs/integration.md#async-work-handles) |
+| Nsight Systems | 跨 stream 观察与精度对照 | [验证说明](docs/validation.md) |
 
-CUPTI 数据最底层，Nsight Systems 是系统级综合时间轴，PyTorch Profiler 最容易对应框架算子。三者是互补数据源，不是等价计时器。
+这些数据源测量的对象不同。CUPTI 提供 GPU activity 时间；`Work.wait()` 观察的是
+主机侧等待，不能当作精确 NCCL kernel 时间。
 
 ## 核心指标
 
-| 指标 | 含义 |
+| 指标 | 定义 |
 | --- | --- |
-| `communication_runtime` | NCCL/通信 kernel 区间并集 |
+| `communication_runtime` | 通信区间的并集 |
 | `hidden_communication` | 与已识别计算并发的通信 |
-| `exposed_communication` | 没有被计算覆盖的通信 |
+| `exposed_communication` | 未被计算覆盖的通信 |
 | `communication_hidden_ratio` | `hidden_communication / communication_runtime` |
 | `timeline_overlap_ratio` | `overlap_time / min(compute_time, communication_time)` |
-| `overlap_ratio` | 当前模式明确比例字段的兼容别名 |
-| `wait_time` | Work 在主机侧的等待 proxy |
-| `critical_path_span` | 本次分析覆盖的活动时间范围 |
+| `wait_time` | Work 的主机侧等待 proxy |
 
-所有输出都包含 `overlap_ratio_definition` 和校验报告。critical-path 输出还包含
-`measurement_quality` 和 `communication_runtime_kind`。`kernel_timeline` 表示真实 GPU
-时间轴；`estimated/host_wait_proxy` 不能当作精确 NCCL runtime。
+新代码应使用两个含义明确的 ratio 字段。`overlap_ratio` 仅作为当前模式的兼容别名。
+每份 summary 都记录公式、测量质量、runtime 类型和校验结果。
 
-## CUPTI 采集
+## 测量约束
+
+- 默认 `critical-path` 模式报告通信隐藏情况。
+- `timeline` 模式报告对称区间 overlap 和 pipeline stage 指标。
+- 多 rank/device 时钟域默认拒绝分析；只有完成外部对齐后才能显式使用
+  `--assume-aligned-clocks`。
+- 不完整 CUPTI trace 默认拒绝；`--allow-incomplete` 只能用于调试。
+- `kernel_timeline` 是 GPU 观测证据；`estimated` 和 `host_wait_proxy` 不能表述为
+  精确 NCCL runtime。
+
+跨模式或跨 profiler 比较前，请先阅读[测量语义](docs/measurement.md)。
+
+## 文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [API 与 CLI](docs/api.md) | 使用 Python 或命令行分析 trace |
+| [集成指南](docs/integration.md) | 接入 Work、Megatron 或 PyTorch Profiler |
+| [CUPTI 测量](docs/cupti_measurement.md) | 构建、采集、校验和分析 GPU activity |
+| [测量语义](docs/measurement.md) | 正确解释 overlap 和 critical-path 指标 |
+| [架构](docs/architecture.md) | 模块边界与扩展方式 |
+| [验证](docs/validation.md) | 已验证行为和当前限制 |
+
+完整索引见 [docs/README.md](docs/README.md)，参考资料见
+[references/README.md](references/README.md)。
+
+## 开发
 
 ```bash
-cmake -S native/cupti_collector -B build/cupti -DCMAKE_BUILD_TYPE=Release
-cmake --build build/cupti --parallel
-```
-
-完整采集方式、JSONL schema、丢记录处理和验证方法见 [CUPTI 测量文档](docs/cupti_measurement.md)。
-
-## 架构
-
-```text
-采集器或 profiler trace
-  -> 解析与 kernel 分类
-  -> 统一 Event JSONL
-  -> 数据验证
-  -> timeline / critical-path 分析
-  -> JSON / Markdown / ASCII / Chrome trace
-```
-
-核心分析模块不导入 Megatron、PyTorch、Transformer Engine、Nsight、CUDA 或 CUPTI，运行时集成通过薄 adapter 完成。
-
-## 文档与开发
-
-文档入口：[docs/README.md](docs/README.md)。
-
-```bash
-python3 -m pip install --upgrade pip
 python3 -m pip install -e ".[dev]"
 ruff check .
 python3 -m unittest discover -s tests -p 'test_*.py'
 python3 -m build
 ```
 
-开发规范见 [CONTRIBUTING.md](CONTRIBUTING.md)，路线图见 [ROADMAP.md](ROADMAP.md)。项目使用 [MIT License](LICENSE)。
+开发和发布信息见 [CONTRIBUTING.md](CONTRIBUTING.md)、[ROADMAP.md](ROADMAP.md)
+和 [CITATION.cff](CITATION.cff)。项目采用 [MIT License](LICENSE)。

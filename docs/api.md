@@ -1,44 +1,20 @@
 # Python API and CLI
 
-The high-level Python API and CLI share the same loading, filtering, validation,
-and analysis implementation. Use the high-level API for applications and the
-lower-level classes only when constructing custom pipelines.
+The Python API and CLI share one loading, filtering, validation, and analysis
+pipeline. Applications should use the package-level functions below; lower-level
+parsers and analyzers are extension points, not the primary interface.
 
-## Stable Python Entry Points
+## API At A Glance
 
-The package root exports:
-
-```python
-from overlap_monitor import (
-    AnalysisResult,
-    Event,
-    EventType,
-    TraceValidationError,
-    analyze_events,
-    analyze_trace,
-    load_trace,
-)
-```
-
-### Load a trace
+| Entry point | Use case | Returns |
+| --- | --- | --- |
+| `load_trace()` | Load, normalize, and filter a trace | `list[Event]` |
+| `analyze_trace()` | Analyze Event or CUPTI JSONL end to end | `AnalysisResult` |
+| `analyze_events()` | Analyze normalized in-memory events | `AnalysisResult` |
 
 ```python
-events = load_trace(
-    "trace.jsonl",
-    input_format="auto",
-    rank=0,
-    device_id=0,
-    stage_id=0,
-)
-```
+from overlap_monitor import analyze_trace
 
-`load_trace()` accepts normalized Event JSONL and native CUPTI JSONL. It
-auto-detects the source by default, normalizes CUPTI timestamps to microseconds,
-and applies rank/device/stage filters. It does not analyze the events.
-
-### Load and analyze
-
-```python
 result = analyze_trace(
     "trace.jsonl",
     mode="critical-path",
@@ -48,74 +24,74 @@ result = analyze_trace(
 
 print(result.communication_hidden_ratio)
 print(result.validation.valid)
-print(result.to_dict())
+summary = result.to_dict()
 ```
 
-`analyze_trace()` returns `AnalysisResult`, which contains:
+### Common arguments
+
+| Argument | Values | Default | Meaning |
+| --- | --- | --- | --- |
+| `input_format` | `auto`, `events`, `cupti` | `auto` | Input parser; automatic detection is recommended |
+| `mode` | `critical-path`, `timeline` | `critical-path` | Metric family to compute |
+| `rank` | integer or `None` | `None` | Keep one distributed rank |
+| `device_id` | integer or `None` | `None` | Keep one CUDA device |
+| `stage_id` | integer or `None` | `None` | Keep one pipeline stage |
+| `allow_incomplete` | boolean | `False` | Permit incomplete CUPTI data for debugging |
+| `assume_aligned_clocks` | boolean | `False` | Assert that multiple clock domains were externally aligned |
+
+`load_trace()` accepts the input and filter arguments, but does not take `mode`
+or `assume_aligned_clocks` because it does not run validation or analysis.
+
+## In-Memory Events
+
+```python
+from overlap_monitor import Event, EventType, analyze_events
+
+events = [
+    Event(0, 10, EventType.GEMM, rank=0, stage_id=0),
+    Event(5, 15, EventType.NCCL, rank=0, stage_id=0),
+]
+result = analyze_events(events, mode="timeline")
+print(result.timeline_overlap_ratio)  # 0.5
+```
+
+Invalid inputs raise `TraceValidationError`; the complete validation report is
+available as `exc.report`.
+
+## Result Contract
+
+`AnalysisResult` contains both the normalized evidence and the serialized
+summary contract:
 
 | Field | Meaning |
 | --- | --- |
-| `events` | normalized and filtered events used by the analyzer |
-| `summary` | `CriticalPathSummary` or `OverlapSummary` |
-| `validation` | event count, clock domains, warnings, and errors |
+| `events` | Filtered events used in the calculation |
+| `summary` | Mode-specific metric object |
+| `validation` | Event count, clock domains, warnings, and errors |
 | `analysis_mode` | `critical-path` or `timeline` |
-| `input_format` | detected `events` or `cupti` source |
-| `clock_alignment_assumed` | whether cross-domain alignment was asserted by the caller |
-| `source_warnings` | parser warnings such as incomplete CUPTI records |
+| `input_format` | Detected `events` or `cupti` format |
+| `clock_alignment_assumed` | Whether external clock alignment was asserted |
+| `source_warnings` | Parser warnings, including incomplete CUPTI evidence |
+| `timestamp_unit` | Always `us` for normalized events |
 
-`result.to_dict()` produces the versioned summary JSON used by the CLI.
+`result.to_dict()` returns the versioned JSON object written by the CLI.
 
-### Analyze in-memory events
-
-```python
-result = analyze_events(
-    events,
-    mode="timeline",
-)
-print(result.timeline_overlap_ratio)
-```
-
-Invalid event sets raise `TraceValidationError`. The exception exposes the full
-report as `exc.report`.
-
-## Ratio Fields
-
-The explicit fields should be used by new integrations:
+Use the explicit ratio for the selected mode:
 
 ```text
-timeline mode:
-  timeline_overlap_ratio
-  = overlap_time / min(compute_time, communication_time)
+critical-path: communication_hidden_ratio
+               = hidden_communication / communication_runtime
 
-critical-path mode:
-  communication_hidden_ratio
-  = hidden_communication / communication_runtime
+timeline:      timeline_overlap_ratio
+               = overlap_time / min(compute_time, communication_time)
 ```
 
-`overlap_ratio` remains as a compatibility alias and has the same value as the
-mode-specific field. Every serialized result also contains
-`overlap_ratio_definition`.
+`overlap_ratio` remains a compatibility alias and equals the active explicit
+field. Serialized output always includes `overlap_ratio_definition`.
 
-## Clock Domains
+## CLI
 
-Multiple rank/device clock domains are rejected by default. Only bypass this
-check after timestamps have been aligned externally:
-
-```python
-result = analyze_trace(
-    "aligned-events.jsonl",
-    assume_aligned_clocks=True,
-)
-assert result.clock_alignment_assumed
-```
-
-The CLI equivalent is `--assume-aligned-clocks`. The old
-`--allow-mixed-clock-domains` spelling remains a hidden compatibility alias but
-should not be used in new scripts.
-
-## CLI Mapping
-
-The standard command maps directly to `analyze_trace()`:
+The normal path needs one command:
 
 ```bash
 overlap-monitor analyze \
@@ -124,33 +100,50 @@ overlap-monitor analyze \
   --mode critical-path \
   --rank 0 \
   --stage-id 0 \
-  --output-json summary.json
+  --events-output events_rank0.jsonl \
+  --output-json summary_rank0.json \
+  --trace-json timeline_rank0.json \
+  --table
 ```
 
-Validation uses the same loader and accepts either trace format:
+| Option | Effect |
+| --- | --- |
+| `--events-output` | Save the normalized Event JSONL used in analysis |
+| `--output-json` | Save the versioned metric summary |
+| `--trace-json` | Save Chrome Trace format output |
+| `--table` | Print a Markdown summary table |
+| `--ascii` | Print a compact stage timeline |
+
+Validate without calculating metrics:
 
 ```bash
-overlap-monitor validate \
-  --input trace.jsonl \
-  --input-format auto \
-  --rank 0
+overlap-monitor validate --input trace.jsonl --rank 0
 ```
 
-`import-cupti` is retained for workflows that need a persistent normalized
-Event JSONL before analysis. The normal CUPTI path needs only `analyze`.
+Run `overlap-monitor analyze --help` for the complete option list.
+`import-cupti` remains available when a workflow needs persistent normalized
+events before analysis; direct `analyze` is preferred otherwise.
 
-## Versioned Schemas
+## Safety Rules
 
-New normalized Event records include `schema_version: 1`. Readers still accept
-legacy records with no version and reject unknown explicit versions.
+- Analyze one rank/device clock domain at a time unless timestamps were aligned
+  externally. In that case, use `--assume-aligned-clocks`; the assumption is
+  recorded in the output.
+- Keep incomplete CUPTI records rejected for reported measurements.
+  `--allow-incomplete` is a debugging escape hatch.
+- Treat `host_wait_proxy` and `estimated` results as proxies, not precise NCCL
+  kernel duration. See [measurement semantics](measurement.md).
 
-The package ships:
+## Schemas
+
+Normalized Event and summary records use `schema_version: 1`:
 
 ```text
 overlap_monitor/schemas/event-v1.schema.json
 overlap_monitor/schemas/summary-v1.schema.json
 ```
 
-Standard Event metadata fields are `iteration`, `microbatch_id`, `phase`,
+Standard Event metadata keys are `iteration`, `microbatch_id`, `phase`,
 `comm_id`, `measurement`, `runtime_kind`, `clock_domain`, and
-`timestamp_unit`. Additional source-specific metadata remains allowed.
+`timestamp_unit`. Readers accept legacy records without a version, reject
+unknown explicit versions, and preserve additional source metadata.
